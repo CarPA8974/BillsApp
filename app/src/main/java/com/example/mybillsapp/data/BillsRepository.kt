@@ -1,0 +1,79 @@
+package com.example.mybillsapp.data
+
+import android.content.Context
+import com.example.mybillsapp.model.BankEntity
+import com.example.mybillsapp.model.BankPresets
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.File
+
+class BillsRepository(private val context: Context) {
+    // Ao mudar o nome do arquivo, garantimos que todas as novas instalações (e updates)
+    // ignorem qualquer dado antigo que possa ter ficado no cache do Android
+    // e comecem 100% zerados.
+    private val fileName = "mybills_v3.json"
+    private val gson = Gson()
+
+    fun loadData(): List<BankEntity> {
+        return try {
+            val file = File(context.filesDir, fileName)
+            if (file.exists()) {
+                val jsonText = file.readText()
+                if (jsonText.isBlank()) return emptyList()
+                val listType = object : TypeToken<List<BankEntity>>() {}.type
+                val loadedList: List<BankEntity> = gson.fromJson(jsonText, listType) ?: emptyList()
+                
+                // Sanitize and migrate loaded items
+                loadedList.map { bank ->
+                    val preset = BankPresets.presets.find { it.key == bank.presetKey }
+                    val safeHex = if (bank.colorHex.isNotBlank() && bank.colorHex.startsWith("#")) {
+                        bank.colorHex
+                    } else preset?.hexColor ?: BankPresets.presets[bank.colorIndex % BankPresets.presets.size].hexColor
+
+                    bank.copy(
+                        colorHex = safeHex,
+                        items = bank.items.map { item ->
+                            val safeCategory = item.category
+                            val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10
+                            val safeTotalAmount = if (item.totalAmount > 0.0) item.totalAmount else item.monthlyAmount * item.totalInstallments
+                            item.copy(
+                                category = safeCategory,
+                                dueDay = safeDueDay,
+                                totalAmount = safeTotalAmount
+                            )
+                        }
+                    )
+                }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    fun saveData(list: List<BankEntity>) {
+        try {
+            val file = File(context.filesDir, fileName)
+            val jsonText = gson.toJson(list)
+            file.writeText(jsonText)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun exportJson(list: List<BankEntity>): String {
+        return gson.toJson(list)
+    }
+
+    fun importJson(jsonString: String): List<BankEntity>? {
+        return try {
+            val listType = object : TypeToken<List<BankEntity>>() {}.type
+            gson.fromJson<List<BankEntity>>(jsonString, listType)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
