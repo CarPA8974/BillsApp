@@ -11,6 +11,7 @@ import com.example.mybillsapp.model.MonthYear
 import com.example.mybillsapp.ui.components.StatusFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.UUID
 
 enum class NavTab(val label: String) {
     HOME("Início"),
@@ -100,6 +101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         category: BillCategory,
         notes: String
     ) {
+        val activeMonth = _currentMonthYear.value
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
                 val newItem = BillItem(
@@ -111,7 +113,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     dueDay = dueDay,
                     category = category,
                     notes = notes,
-                    isPaid = false
+                    isPaid = false,
+                    month = activeMonth.month,
+                    year = activeMonth.year
                 )
                 bank.copy(items = bank.items + newItem)
             } else bank
@@ -169,27 +173,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun advanceMonthCycle() {
-        // Unchecks all paid bills and advances installment counts for parcelled items
-        val updated = _banks.value.map { bank ->
-            val updatedItems = bank.items.mapNotNull { item ->
+        val currentMonth = _currentMonthYear.value
+        val nextMonth = currentMonth.nextMonth()
+
+        val updatedBanks = _banks.value.map { bank ->
+            val activeItems = bank.itemsForMonth(currentMonth.month, currentMonth.year)
+            val newNextMonthItems = activeItems.mapNotNull { item ->
                 if (item.totalInstallments > 1) {
                     if (item.currentInstallment >= item.totalInstallments) {
-                        // Finished paying all installments, remove
-                        null
+                        null // Finished paying all installments
                     } else {
                         item.copy(
+                            id = UUID.randomUUID().toString(),
                             currentInstallment = item.currentInstallment + 1,
-                            isPaid = false
+                            isPaid = false,
+                            month = nextMonth.month,
+                            year = nextMonth.year
                         )
                     }
                 } else {
-                    // Regular recurring monthly bill, reset paid status
-                    item.copy(isPaid = false)
+                    // Regular recurring monthly bill
+                    item.copy(
+                        id = UUID.randomUUID().toString(),
+                        isPaid = false,
+                        month = nextMonth.month,
+                        year = nextMonth.year
+                    )
                 }
             }
-            bank.copy(items = updatedItems)
+            // Preserve all existing items (for history) and append new items for next month
+            bank.copy(items = bank.items + newNextMonthItems)
         }
-        updateData(updated)
+
+        updateData(updatedBanks)
+        _currentMonthYear.value = nextMonth
     }
 
     fun reloadData() {

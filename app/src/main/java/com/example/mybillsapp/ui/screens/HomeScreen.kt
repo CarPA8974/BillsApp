@@ -45,24 +45,26 @@ fun HomeScreen(
     var showAdvanceCycleDialog by remember { mutableStateOf(false) }
 
     // Computations
-    val allItems = banks.flatMap { it.items }
-    val totalMonthAmount = banks.sumOf { it.subtotalCurrentMonth }
-    val totalPaidAmount = banks.sumOf { it.subtotalCurrentMonthPaid }
-    val totalPendingAmount = banks.sumOf { it.subtotalCurrentMonthPending }
+    val allItemsForMonth = banks.flatMap { it.itemsForMonth(currentMonthYear.month, currentMonthYear.year) }
+    val totalMonthAmount = banks.sumOf { it.subtotalMonth(currentMonthYear.month, currentMonthYear.year) }
+    val totalPaidAmount = banks.sumOf { it.subtotalMonthPaid(currentMonthYear.month, currentMonthYear.year) }
+    val totalPendingAmount = banks.sumOf { it.subtotalMonthPending(currentMonthYear.month, currentMonthYear.year) }
 
     val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-    val overdueCount = allItems.count { !it.isPaid && currentDay > it.dueDay }
+    val isCurrentMonth = currentMonthYear == MonthYear.current()
+    val overdueCount = if (isCurrentMonth) allItemsForMonth.count { !it.isPaid && currentDay > it.dueDay } else 0
 
-    // Filter banks & bills
-    val filteredBanks = remember(banks, searchQuery, statusFilter, categoryFilter) {
+    // Filter banks & bills for the active month/year
+    val filteredBanks = remember(banks, currentMonthYear, searchQuery, statusFilter, categoryFilter) {
         banks.mapNotNull { bank ->
-            val filteredItems = bank.items.filter { item ->
+            val monthItems = bank.itemsForMonth(currentMonthYear.month, currentMonthYear.year)
+            val filteredItems = monthItems.filter { item ->
                 val matchesSearch = searchQuery.isBlank() ||
                         item.description.contains(searchQuery, ignoreCase = true) ||
                         bank.name.contains(searchQuery, ignoreCase = true) ||
                         item.notes.contains(searchQuery, ignoreCase = true)
 
-                val isOverdue = !item.isPaid && currentDay > item.dueDay
+                val isOverdue = !item.isPaid && currentDay > item.dueDay && isCurrentMonth
                 val matchesStatus = when (statusFilter) {
                     StatusFilter.ALL -> true
                     StatusFilter.PENDING -> !item.isPaid
@@ -188,6 +190,7 @@ fun HomeScreen(
                         bank = bank,
                         isPrivacy = isPrivacy,
                         showFuture = false,
+                        isCurrentMonth = isCurrentMonth,
                         onAddBill = { selectedBankForAddBill = bank.id },
                         onEditBank = { editingBank = bank },
                         onRemoveBank = { bankToDelete = bank },

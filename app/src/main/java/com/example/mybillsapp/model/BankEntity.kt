@@ -21,6 +21,14 @@ data class BankEntity(
     val presetKey: String = "OUTRO",
     val colorIndex: Int = 0 // For backwards compatibility
 ) {
+    fun itemsForMonth(month: Int, year: Int): List<BillItem> {
+        return items.filter { it.month == month && it.year == year }
+    }
+
+    fun subtotalMonth(month: Int, year: Int): Double = itemsForMonth(month, year).sumOf { it.monthlyAmount }
+    fun subtotalMonthPending(month: Int, year: Int): Double = itemsForMonth(month, year).filter { !it.isPaid }.sumOf { it.monthlyAmount }
+    fun subtotalMonthPaid(month: Int, year: Int): Double = itemsForMonth(month, year).filter { it.isPaid }.sumOf { it.monthlyAmount }
+
     val subtotalCurrentMonth: Double get() = items.sumOf { it.monthlyAmount }
     val subtotalCurrentMonthPending: Double get() = items.filter { !it.isPaid }.sumOf { it.monthlyAmount }
     val subtotalCurrentMonthPaid: Double get() = items.filter { it.isPaid }.sumOf { it.monthlyAmount }

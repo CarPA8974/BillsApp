@@ -216,8 +216,10 @@ fun AppMainContent(viewModel: MainViewModel = viewModel()) {
                         isPrivacy = isPrivacy
                     )
                     NavTab.ANALYTICS -> AnalyticsScreen(
+                        viewModel = viewModel,
                         banks = banks,
-                        isPrivacy = isPrivacy
+                        isPrivacy = isPrivacy,
+                        currentMonthYear = currentMonthYear
                     )
                     NavTab.SETTINGS -> SettingsScreen(
                         viewModel = viewModel,

@@ -28,13 +28,17 @@ fun BillListItem(
     isPrivacy: Boolean,
     modifier: Modifier = Modifier,
     showFuture: Boolean = false,
+    currentMonthDisplay: Boolean = true, // Nova variável para indicar se estamos vendo o mês corrente
     onTogglePaid: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-    val isOverdue = !item.isPaid && currentDay > item.dueDay
-    val isDueToday = !item.isPaid && currentDay == item.dueDay
+    
+    // Só é "atrasado" se não estiver pago E se for o mês corrente E o dia atual for maior que o vencimento
+    val isOverdue = !item.isPaid && currentDay > item.dueDay && currentMonthDisplay
+    // Só "vence hoje" se for o mês corrente
+    val isDueToday = !item.isPaid && currentDay == item.dueDay && currentMonthDisplay
 
     val dueText = when {
         item.isPaid -> "Pago"

@@ -6,6 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +17,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.model.BankEntity
+import com.example.mybillsapp.model.MonthYear
 import com.example.mybillsapp.toCurrency
+import com.example.mybillsapp.ui.MainViewModel
 import com.example.mybillsapp.ui.components.ChartSlice
 import com.example.mybillsapp.ui.components.DonutChart
 
@@ -25,30 +30,40 @@ enum class AnalyticsType {
 
 @Composable
 fun AnalyticsScreen(
+    viewModel: MainViewModel,
     banks: List<BankEntity>,
     isPrivacy: Boolean,
+    currentMonthYear: MonthYear,
     modifier: Modifier = Modifier
 ) {
     var selectedType by remember { mutableStateOf(AnalyticsType.BY_BANK) }
 
-    // O gráfico agora mostrará apenas o que FALTA pagar!
-    val totalPendingAmount = banks.sumOf { it.subtotalCurrentMonthPending }
+    // Obter todas as faturas do mês selecionado
+    val activeMonthBills = remember(banks, currentMonthYear) {
+        banks.flatMap { it.itemsForMonth(currentMonthYear.month, currentMonthYear.year) }
+    }
+
+    val totalMonthAmount = remember(activeMonthBills) {
+        activeMonthBills.sumOf { it.monthlyAmount }
+    }
 
     // Slices for By Bank
-    val bankSlices = remember(banks) {
-        banks.filter { it.subtotalCurrentMonthPending > 0 }.map { bank ->
-            ChartSlice(
-                label = bank.name,
-                amount = bank.subtotalCurrentMonthPending,
-                color = bank.getColor()
-            )
+    val bankSlices = remember(banks, currentMonthYear) {
+        banks.mapNotNull { bank ->
+            val sum = bank.subtotalMonth(currentMonthYear.month, currentMonthYear.year)
+            if (sum > 0) {
+                ChartSlice(
+                    label = bank.name,
+                    amount = sum,
+                    color = bank.getColor()
+                )
+            } else null
         }
     }
 
     // Slices for By Category
-    val categorySlices = remember(banks) {
-        val allBills = banks.flatMap { it.items }.filter { !it.isPaid } // Só pega as que NÃO estão pagas!
-        val grouped = allBills.groupBy { it.category }
+    val categorySlices = remember(activeMonthBills) {
+        val grouped = activeMonthBills.groupBy { it.category }
         grouped.map { (category, items) ->
             val sum = items.sumOf { it.monthlyAmount }
             ChartSlice(
@@ -67,6 +82,38 @@ fun AnalyticsScreen(
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Month Selector Bar
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { viewModel.previousMonth() }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês anterior")
+                }
+
+                Text(
+                    text = currentMonthYear.formatDisplay(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                IconButton(onClick = { viewModel.nextMonth() }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         // Type Selector Tab Row
@@ -89,7 +136,7 @@ fun AnalyticsScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (totalPendingAmount <= 0) {
+        if (totalMonthAmount <= 0) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,10 +144,9 @@ fun AnalyticsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Todas as contas estão pagas! 🎉",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    text = "Nenhuma despesa registrada em ${currentMonthYear.formatDisplay()}.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         } else {
@@ -120,7 +166,7 @@ fun AnalyticsScreen(
                     ) {
                         DonutChart(
                             slices = activeSlices,
-                            totalAmount = totalPendingAmount,
+                            totalAmount = totalMonthAmount,
                             isPrivacy = isPrivacy
                         )
                     }
@@ -129,7 +175,7 @@ fun AnalyticsScreen(
                 // Breakdown list header
                 item {
                     Text(
-                        text = if (selectedType == AnalyticsType.BY_BANK) "Detalhamento (Falta Pagar) por Instituição" else "Detalhamento (Falta Pagar) por Categoria",
+                        text = if (selectedType == AnalyticsType.BY_BANK) "Detalhamento por Instituição" else "Detalhamento por Categoria",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -140,7 +186,7 @@ fun AnalyticsScreen(
 
                 // Slice Items
                 items(activeSlices, key = { it.label }) { slice ->
-                    val percentage = (slice.amount / totalPendingAmount * 100).toInt()
+                    val percentage = (slice.amount / totalMonthAmount * 100).toInt()
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),

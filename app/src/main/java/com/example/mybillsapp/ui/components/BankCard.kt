@@ -31,6 +31,7 @@ fun BankCard(
     isPrivacy: Boolean,
     modifier: Modifier = Modifier,
     showFuture: Boolean = false,
+    isCurrentMonth: Boolean = true, // repassando pro BillListItem
     onAddBill: () -> Unit,
     onEditBank: () -> Unit,
     onRemoveBank: () -> Unit,
@@ -135,6 +136,7 @@ fun BankCard(
                                         item = item,
                                         isPrivacy = isPrivacy,
                                         showFuture = showFuture,
+                                        currentMonthDisplay = isCurrentMonth,
                                         onTogglePaid = { onToggleBill(item.id) },
                                         onEdit = { onEditBill(item) },
                                         onDelete = { onRemoveBill(item.id) }

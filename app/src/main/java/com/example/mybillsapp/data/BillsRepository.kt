@@ -6,15 +6,17 @@ import com.example.mybillsapp.model.BankPresets
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
+import java.util.Calendar
 
 class BillsRepository(private val context: Context) {
-    // Ao mudar o nome do arquivo, garantimos que todas as novas instalações (e updates)
-    // ignorem qualquer dado antigo que possa ter ficado no cache do Android
-    // e comecem 100% zerados.
     private val fileName = "mybills_v3.json"
     private val gson = Gson()
 
     fun loadData(): List<BankEntity> {
+        val cal = Calendar.getInstance()
+        val defaultMonth = cal.get(Calendar.MONTH)
+        val defaultYear = cal.get(Calendar.YEAR)
+
         return try {
             val file = File(context.filesDir, fileName)
             if (file.exists()) {
@@ -36,10 +38,15 @@ class BillsRepository(private val context: Context) {
                             val safeCategory = item.category
                             val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10
                             val safeTotalAmount = if (item.totalAmount > 0.0) item.totalAmount else item.monthlyAmount * item.totalInstallments
+                            val safeYear = if (item.year > 2000) item.year else defaultYear
+                            val safeMonth = if (item.month in 0..11) item.month else defaultMonth
+
                             item.copy(
                                 category = safeCategory,
                                 dueDay = safeDueDay,
-                                totalAmount = safeTotalAmount
+                                totalAmount = safeTotalAmount,
+                                month = safeMonth,
+                                year = safeYear
                             )
                         }
                     )

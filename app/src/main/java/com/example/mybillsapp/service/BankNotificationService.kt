@@ -18,8 +18,17 @@ class BankNotificationService : NotificationListenerService() {
         "com.c6bank.app" to "C6_BANK",
         "br.com.intermedium" to "INTER",
         "com.santander.app" to "SANTANDER",
-        "br.com.bb.android" to "BANCO_DO_BRASIL"
+        "br.com.bb.android" to "BANCO_DO_BRASIL",
+        "br.com.bradesco.next" to "NEXT",
+        "br.com.brainweb.ifood" to "OUTRO", // Se quiser capturar do ifood
+        "com.mercadopago.wallet" to "MERCADO_PAGO",
+        "com.picpay" to "PICPAY",
+        "br.com.uol.ps.myaccount" to "PAGBANK",
+        "br.com.neon" to "NEON"
     )
+
+    private var lastProcessedNotificationTime: Long = 0
+    private var lastProcessedContent: String = ""
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -33,13 +42,22 @@ class BankNotificationService : NotificationListenerService() {
         val text = extras.getString(Notification.EXTRA_TEXT) ?: ""
         val content = "$title $text".lowercase()
 
+        // PREVENÇÃO DE DUPLICATAS: Evita processar a exata mesma notificação em menos de 5 segundos
+        val currentTime = System.currentTimeMillis()
+        if (content == lastProcessedContent && (currentTime - lastProcessedNotificationTime) < 5000) {
+            Log.d("BankNotification", "Notificação duplicada ignorada (Tempo: ${currentTime - lastProcessedNotificationTime}ms)")
+            return
+        }
+        lastProcessedNotificationTime = currentTime
+        lastProcessedContent = content
+
         Log.d("BankNotification", "Recebida de $presetKey: $content")
 
         // 1. Filtrar notificações indesejadas (Pix recebido, transferências, promoções)
         val ignoreKeywords = listOf(
             "transferência recebida", "pix recebido", "você recebeu", 
             "dinheiro guardado", "rendimento", "promoção", "fatura fechada",
-            "pagamento recebido", "transferiu para você"
+            "pagamento recebido", "transferiu para você", "chegou um pix"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
             Log.d("BankNotification", "Notificação ignorada por conter palavra reservada de recebimento/info.")
@@ -47,9 +65,11 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         // 2. Garantir que é uma notificação de "saída" de dinheiro (compra, pagamento, pix enviado)
+        // Adicionado "pix feito" e "transferência realizada"
         val validKeywords = listOf(
             "compra", "aprovada", "pagamento", "transferência enviada", 
-            "pix enviado", "você pagou", "você transferiu"
+            "pix enviado", "pix realizado", "você pagou", "você transferiu",
+            "pagamento aprovado", "transferência realizada", "pix feito"
         )
         if (validKeywords.none { content.contains(it) }) {
             Log.d("BankNotification", "Notificação ignorada pois não parece ser uma transação de saída de dinheiro.")
@@ -71,6 +91,8 @@ class BankNotificationService : NotificationListenerService() {
             val description = extrairDescricao(originalTitle, originalText)
 
             saveBillAutomatically(presetKey, description, amount)
+        } else {
+             Log.d("BankNotification", "Valor em R$ não encontrado na notificação.")
         }
     }
 
@@ -82,7 +104,7 @@ class BankNotificationService : NotificationListenerService() {
         if (match != null && match.groupValues[1].isNotBlank()) {
             val extracted = match.groupValues[1].trim()
             // Limpa coisas como "no valor de" que a regex pode acabar pegando
-            if (!extracted.lowercase().startsWith("valor")) {
+            if (!extracted.lowercase().startsWith("valor") && !extracted.lowercase().startsWith("r$")) {
                 return extracted
             }
         }
@@ -111,7 +133,10 @@ class BankNotificationService : NotificationListenerService() {
         val isDuplicate = targetBank.items.takeLast(5).any { 
             it.description == description && it.monthlyAmount == amount 
         }
-        if (isDuplicate) return
+        if (isDuplicate) {
+            Log.d("BankNotification", "Despesa $description já foi cadastrada recentemente. Ignorando.")
+            return
+        }
 
         val newItem = BillItem(
             description = description,
@@ -122,7 +147,7 @@ class BankNotificationService : NotificationListenerService() {
             dueDay = 10,
             category = BillCategory.OUTROS,
             isPaid = false,
-            notes = "Adicionado automaticamente"
+            notes = "Adicionado automaticamente via notificação"
         )
 
         val updatedBank = targetBank.copy(items = targetBank.items + newItem)
@@ -132,6 +157,6 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         repository.saveData(currentBanks)
-        Log.d("BankNotification", "Despesa $description de R$$amount salva no banco ${preset.name}")
+        Log.d("BankNotification", "Despesa $description de R$$amount salva com SUCESSO no banco ${preset.name}")
     }
 }
