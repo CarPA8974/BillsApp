@@ -1,11 +1,10 @@
 package com.example.mybillsapp.data
 
 import android.content.Context
+import android.util.Log
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
-import com.example.mybillsapp.model.BillCategory
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.util.Calendar
 
@@ -23,9 +22,9 @@ class BillsRepository(private val context: Context) {
             if (file.exists()) {
                 val jsonText = file.readText()
                 if (jsonText.isBlank()) return emptyList()
-                val listType = object : TypeToken<List<BankEntity>>() {}.type
-                val loadedList: List<BankEntity>? = gson.fromJson(jsonText, listType)
-                if (loadedList == null) return emptyList()
+
+                val loadedArray: Array<BankEntity>? = gson.fromJson(jsonText, Array<BankEntity>::class.java)
+                val loadedList = loadedArray?.toList() ?: return emptyList()
                 
                 // Sanitize and migrate loaded items with strict null-safety
                 loadedList.map { bank ->
@@ -57,7 +56,7 @@ class BillsRepository(private val context: Context) {
                 emptyList()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("BillsRepository", "Erro ao carregar dados: ${e.message}", e)
             emptyList()
         }
     }
@@ -67,8 +66,9 @@ class BillsRepository(private val context: Context) {
             val file = File(context.filesDir, fileName)
             val jsonText = gson.toJson(list)
             file.writeText(jsonText)
+            Log.d("BillsRepository", "Dados salvos com sucesso (${list.size} bancos).")
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("BillsRepository", "Erro ao salvar dados: ${e.message}", e)
         }
     }
 
@@ -78,10 +78,10 @@ class BillsRepository(private val context: Context) {
 
     fun importJson(jsonString: String): List<BankEntity>? {
         return try {
-            val listType = object : TypeToken<List<BankEntity>>() {}.type
-            gson.fromJson<List<BankEntity>>(jsonString, listType)
+            val loadedArray = gson.fromJson(jsonString, Array<BankEntity>::class.java)
+            loadedArray?.toList()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("BillsRepository", "Erro ao importar JSON: ${e.message}", e)
             null
         }
     }

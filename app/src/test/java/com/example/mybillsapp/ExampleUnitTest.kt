@@ -4,6 +4,7 @@ import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BillCategory
 import com.example.mybillsapp.model.BillItem
 import com.example.mybillsapp.model.MonthYear
+import com.google.gson.Gson
 import org.junit.Test
 import org.junit.Assert.*
 
@@ -42,6 +43,45 @@ class ExampleUnitTest {
         assertEquals(420.0, bank.subtotalCurrentMonth, 0.01)
         assertEquals(300.0, bank.subtotalCurrentMonthPaid, 0.01)
         assertEquals(120.0, bank.subtotalCurrentMonthPending, 0.01)
+    }
+
+    @Test
+    fun testJsonSerializationDeserialization() {
+        val gson = Gson()
+        val item = BillItem(
+            description = "Aluguel",
+            monthlyAmount = 1500.0,
+            dueDay = 10,
+            category = BillCategory.MORADIA,
+            month = 2,
+            year = 2025
+        )
+        val bank = BankEntity(
+            name = "Itaú",
+            colorHex = "#EC7000",
+            presetKey = "ITAU",
+            items = listOf(item)
+        )
+        val originalList = listOf(bank)
+
+        val jsonText = gson.toJson(originalList)
+        assertNotNull(jsonText)
+
+        // Test Type-Safe Array Deserialization
+        val deserializedArray = gson.fromJson(jsonText, Array<BankEntity>::class.java)
+        assertNotNull(deserializedArray)
+        assertEquals(1, deserializedArray.size)
+
+        val restoredBank = deserializedArray[0]
+        assertEquals("Itaú", restoredBank.name)
+        assertEquals(1, restoredBank.items.size)
+
+        val restoredItem = restoredBank.items[0]
+        assertEquals("Aluguel", restoredItem.description)
+        assertEquals(1500.0, restoredItem.monthlyAmount, 0.01)
+        assertEquals(2, restoredItem.month)
+        assertEquals(2025, restoredItem.year)
+        assertEquals(BillCategory.MORADIA, restoredItem.category)
     }
 
     @Test
