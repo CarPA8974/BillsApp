@@ -71,16 +71,9 @@ class BillsRepository(private val context: Context) {
         synchronized(fileLock) {
             try {
                 val file = File(context.filesDir, fileName)
-                val tmpFile = File(context.filesDir, "$fileName.tmp")
-                val jsonText = gson.toJson(list)
-                
-                // Gravação Atômica usando arquivo temporário para evitar corrupção durante I/O
-                tmpFile.writeText(jsonText)
-                if (tmpFile.exists() && tmpFile.length() > 0) {
-                    if (file.exists()) file.delete()
-                    tmpFile.renameTo(file)
-                }
-                Log.d("BillsRepository", "Dados salvos atomicamente com sucesso (${list.size} bancos).")
+                // Escrita direta, segura e truncada nativa do Kotlin. Sem arquivos temporários.
+                file.writeText(gson.toJson(list))
+                Log.d("BillsRepository", "Dados salvos com sucesso (${list.size} bancos).")
             } catch (e: Exception) {
                 Log.e("BillsRepository", "Erro ao salvar dados: ${e.message}", e)
             }

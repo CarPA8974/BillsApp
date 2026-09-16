@@ -110,7 +110,6 @@ fun FutureScreen(
                         bank = bank,
                         isPrivacy = isPrivacy,
                         showFuture = true,
-                        isCurrentMonth = false,
                         onAddBill = {},
                         onEditBank = {},
                         onRemoveBank = {},
