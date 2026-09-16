@@ -9,7 +9,8 @@ import java.io.File
 import java.util.Calendar
 
 class BillsRepository(private val context: Context) {
-    private val fileName = "mybills_v3.json"
+    private val prefs = context.getSharedPreferences("mybills_database", Context.MODE_PRIVATE)
+    private val dataKey = "banks_data_v4"
     private val gson = Gson()
 
     companion object {
@@ -23,42 +24,37 @@ class BillsRepository(private val context: Context) {
 
         synchronized(fileLock) {
             return try {
-                val file = File(context.filesDir, fileName)
-                if (file.exists()) {
-                    val jsonText = file.readText()
-                    if (jsonText.isBlank()) return emptyList()
+                val jsonText = prefs.getString(dataKey, null)
+                if (jsonText.isNullOrBlank()) return emptyList()
 
-                    val loadedArray: Array<BankEntity>? = gson.fromJson(jsonText, Array<BankEntity>::class.java)
-                    val loadedList = loadedArray?.toList() ?: return emptyList()
-                    
-                    // Sanitize and migrate loaded items with strict null-safety
-                    loadedList.map { bank ->
-                        val preset = BankPresets.presets.find { it.key == bank.presetKey }
-                        val safeHex = if (bank.colorHex.isNotBlank() && bank.colorHex.startsWith("#")) {
-                            bank.colorHex
-                        } else preset?.hexColor ?: BankPresets.presets[(bank.colorIndex.coerceAtLeast(0)) % BankPresets.presets.size].hexColor
+                val loadedArray: Array<BankEntity>? = gson.fromJson(jsonText, Array<BankEntity>::class.java)
+                val loadedList = loadedArray?.toList() ?: return emptyList()
+                
+                // Sanitize and migrate loaded items with strict null-safety
+                loadedList.map { bank ->
+                    val preset = BankPresets.presets.find { it.key == bank.presetKey }
+                    val safeHex = if (bank.colorHex.isNotBlank() && bank.colorHex.startsWith("#")) {
+                        bank.colorHex
+                    } else preset?.hexColor ?: BankPresets.presets[(bank.colorIndex.coerceAtLeast(0)) % BankPresets.presets.size].hexColor
 
-                        bank.copy(
-                            colorHex = safeHex,
-                            items = bank.items.map { item ->
-                                val safeCategory = item.category
-                                val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10
-                                val safeTotalAmount = if (item.totalAmount > 0.0) item.totalAmount else item.monthlyAmount * item.totalInstallments
-                                val safeYear = if (item.year > 2000) item.year else defaultYear
-                                val safeMonth = if (item.month in 0..11) item.month else defaultMonth
+                    bank.copy(
+                        colorHex = safeHex,
+                        items = bank.items.map { item ->
+                            val safeCategory = item.category
+                            val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10
+                            val safeTotalAmount = if (item.totalAmount > 0.0) item.totalAmount else item.monthlyAmount * item.totalInstallments
+                            val safeYear = if (item.year > 2000) item.year else defaultYear
+                            val safeMonth = if (item.month in 0..11) item.month else defaultMonth
 
-                                item.copy(
-                                    category = safeCategory,
-                                    dueDay = safeDueDay,
-                                    totalAmount = safeTotalAmount,
-                                    month = safeMonth,
-                                    year = safeYear
-                                )
-                            }
-                        )
-                    }
-                } else {
-                    emptyList()
+                            item.copy(
+                                category = safeCategory,
+                                dueDay = safeDueDay,
+                                totalAmount = safeTotalAmount,
+                                month = safeMonth,
+                                year = safeYear
+                            )
+                        }
+                    )
                 }
             } catch (e: Exception) {
                 Log.e("BillsRepository", "Erro ao carregar dados: ${e.message}", e)
@@ -70,10 +66,10 @@ class BillsRepository(private val context: Context) {
     fun saveData(list: List<BankEntity>) {
         synchronized(fileLock) {
             try {
-                val file = File(context.filesDir, fileName)
-                // Escrita direta, segura e truncada nativa do Kotlin. Sem arquivos temporários.
-                file.writeText(gson.toJson(list))
-                Log.d("BillsRepository", "Dados salvos com sucesso (${list.size} bancos).")
+                val jsonText = gson.toJson(list)
+                // Usando SharedPreferences para garantir I/O 100% Atômico e Seguro (evita corrupção de arquivo TXT)
+                prefs.edit().putString(dataKey, jsonText).apply()
+                Log.d("BillsRepository", "Dados salvos atomicamente com sucesso (${list.size} bancos).")
             } catch (e: Exception) {
                 Log.e("BillsRepository", "Erro ao salvar dados: ${e.message}", e)
             }

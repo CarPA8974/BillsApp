@@ -25,4 +25,26 @@ data class BillItem(
 
     val remainingInstallmentsCount: Int
         get() = if (totalInstallments > 1) (totalInstallments - currentInstallment).coerceAtLeast(0) else 0
+
+    fun isOverdue(): Boolean {
+        if (isPaid) return false
+        val today = Calendar.getInstance()
+        val due = Calendar.getInstance().apply {
+            set(Calendar.YEAR, year)
+            set(Calendar.MONTH, month)
+            set(Calendar.DAY_OF_MONTH, dueDay)
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+        }
+        return today.after(due)
+    }
+
+    fun isDueToday(): Boolean {
+        if (isPaid) return false
+        val today = Calendar.getInstance()
+        return today.get(Calendar.YEAR) == year && 
+               today.get(Calendar.MONTH) == month && 
+               today.get(Calendar.DAY_OF_MONTH) == dueDay
+    }
 }

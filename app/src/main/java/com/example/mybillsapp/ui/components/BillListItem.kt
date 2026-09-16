@@ -32,19 +32,8 @@ fun BillListItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val currentCal = Calendar.getInstance()
-    val currentYear = currentCal.get(Calendar.YEAR)
-    val currentMonth = currentCal.get(Calendar.MONTH)
-    val currentDay = currentCal.get(Calendar.DAY_OF_MONTH)
-
-    // Lógica absoluta: Compara a data real atual com a data vinculada à despesa
-    val isOverdue = !item.isPaid && (
-        item.year < currentYear ||
-        (item.year == currentYear && item.month < currentMonth) ||
-        (item.year == currentYear && item.month == currentMonth && currentDay > item.dueDay)
-    )
-
-    val isDueToday = !item.isPaid && item.year == currentYear && item.month == currentMonth && currentDay == item.dueDay
+    val isOverdue = item.isOverdue() && !showFuture
+    val isDueToday = item.isDueToday() && !showFuture
 
     val dueText = when {
         item.isPaid -> "Pago"

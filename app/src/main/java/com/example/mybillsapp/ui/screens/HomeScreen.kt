@@ -50,20 +50,9 @@ fun HomeScreen(
     val totalPaidAmount = banks.sumOf { it.subtotalMonthPaid(currentMonthYear.month, currentMonthYear.year) }
     val totalPendingAmount = banks.sumOf { it.subtotalMonthPending(currentMonthYear.month, currentMonthYear.year) }
 
-    val currentCal = Calendar.getInstance()
-    val currentYear = currentCal.get(Calendar.YEAR)
-    val currentMonth = currentCal.get(Calendar.MONTH)
-    val currentDay = currentCal.get(Calendar.DAY_OF_MONTH)
-    
     val isCurrentMonth = currentMonthYear == MonthYear.current()
 
-    val overdueCount = if (isCurrentMonth) allItemsForMonth.count { item -> 
-        !item.isPaid && (
-            item.year < currentYear ||
-            (item.year == currentYear && item.month < currentMonth) ||
-            (item.year == currentYear && item.month == currentMonth && currentDay > item.dueDay)
-        )
-    } else 0
+    val overdueCount = if (isCurrentMonth) allItemsForMonth.count { it.isOverdue() } else 0
 
     // Filter banks & bills for the active month/year
     val filteredBanks = remember(banks, currentMonthYear, searchQuery, statusFilter, categoryFilter) {
@@ -75,11 +64,7 @@ fun HomeScreen(
                         bank.name.contains(searchQuery, ignoreCase = true) ||
                         item.notes.contains(searchQuery, ignoreCase = true)
 
-                val isOverdue = !item.isPaid && (
-                    item.year < currentYear ||
-                    (item.year == currentYear && item.month < currentMonth) ||
-                    (item.year == currentYear && item.month == currentMonth && currentDay > item.dueDay)
-                )
+                val isOverdue = item.isOverdue()
                 
                 val matchesStatus = when (statusFilter) {
                     StatusFilter.ALL -> true
