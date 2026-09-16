@@ -3,6 +3,7 @@ package com.example.mybillsapp.data
 import android.content.Context
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
+import com.example.mybillsapp.model.BillCategory
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
@@ -23,14 +24,15 @@ class BillsRepository(private val context: Context) {
                 val jsonText = file.readText()
                 if (jsonText.isBlank()) return emptyList()
                 val listType = object : TypeToken<List<BankEntity>>() {}.type
-                val loadedList: List<BankEntity> = gson.fromJson(jsonText, listType) ?: emptyList()
+                val loadedList: List<BankEntity>? = gson.fromJson(jsonText, listType)
+                if (loadedList == null) return emptyList()
                 
-                // Sanitize and migrate loaded items
+                // Sanitize and migrate loaded items with strict null-safety
                 loadedList.map { bank ->
                     val preset = BankPresets.presets.find { it.key == bank.presetKey }
                     val safeHex = if (bank.colorHex.isNotBlank() && bank.colorHex.startsWith("#")) {
                         bank.colorHex
-                    } else preset?.hexColor ?: BankPresets.presets[bank.colorIndex % BankPresets.presets.size].hexColor
+                    } else preset?.hexColor ?: BankPresets.presets[(bank.colorIndex.coerceAtLeast(0)) % BankPresets.presets.size].hexColor
 
                     bank.copy(
                         colorHex = safeHex,
