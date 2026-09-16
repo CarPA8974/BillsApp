@@ -210,7 +210,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun reloadData() {
-        _banks.value = repository.loadData()
+        val loaded = repository.loadData()
+        // Trava de Segurança: Se os dados em memória já têm conteúdo e a leitura temporária do disco retornou vazia
+        // (por exemplo, leitura concorrente ou I/O interrompido), NUNCA sobrescrevemos a memória com lista vazia!
+        if (loaded.isNotEmpty() || _banks.value.isEmpty()) {
+            _banks.value = loaded
+        }
     }
 
     fun clearAllData() {

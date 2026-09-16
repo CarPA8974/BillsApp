@@ -46,6 +46,24 @@ class ExampleUnitTest {
     }
 
     @Test
+    fun testEmptyBankSerialization() {
+        val gson = Gson()
+        val emptyBank = BankEntity(
+            name = "Nubank",
+            colorHex = "#8A05BE",
+            presetKey = "NUBANK",
+            items = emptyList()
+        )
+        val jsonText = gson.toJson(listOf(emptyBank))
+        val loadedArray = gson.fromJson(jsonText, Array<BankEntity>::class.java)
+        assertNotNull(loadedArray)
+        assertEquals(1, loadedArray.size)
+        assertEquals("Nubank", loadedArray[0].name)
+        assertNotNull(loadedArray[0].items)
+        assertTrue(loadedArray[0].items.isEmpty())
+    }
+
+    @Test
     fun testJsonSerializationDeserialization() {
         val gson = Gson()
         val item = BillItem(
