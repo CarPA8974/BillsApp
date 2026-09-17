@@ -50,6 +50,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         _banks.value = repository.loadData()
+        repository.setOnDataChangeListener {
+            reloadData()
+        }
         if (prefs.getBoolean("is_first_access_v1", true)) {
             _showWelcomeDialog.value = true
         }

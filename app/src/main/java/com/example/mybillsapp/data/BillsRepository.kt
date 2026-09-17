@@ -1,20 +1,31 @@
 package com.example.mybillsapp.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
 import com.google.gson.Gson
-import java.io.File
 import java.util.Calendar
 
-class BillsRepository(private val context: Context) {
+class BillsRepository(context: Context) {
     private val prefs = context.getSharedPreferences("mybills_database", Context.MODE_PRIVATE)
     private val dataKey = "banks_data_v4"
     private val gson = Gson()
 
+    private var preferenceChangeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
     companion object {
         private val fileLock = Any()
+    }
+
+    fun setOnDataChangeListener(listener: () -> Unit) {
+        preferenceChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == dataKey) {
+                listener()
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(preferenceChangeListener)
     }
 
     fun loadData(): List<BankEntity> {
