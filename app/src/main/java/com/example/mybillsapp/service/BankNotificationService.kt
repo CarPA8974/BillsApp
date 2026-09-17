@@ -56,10 +56,16 @@ class BankNotificationService : NotificationListenerService() {
         // Ignora notificações do próprio app para não criar loops
         if (packageName == applicationContext.packageName) return
 
+        // Extrai texto de TODOS os campos possíveis de notificação do Android
         val extras = sbn.notification.extras
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
         val text = extras.getString(Notification.EXTRA_TEXT) ?: ""
-        val content = "$title $text".lowercase()
+        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() ?: ""
+        val subText = extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString() ?: ""
+        val ticker = sbn.notification.tickerText?.toString() ?: ""
+
+        val rawContent = "$title $text $bigText $subText $ticker".trim()
+        val content = rawContent.lowercase()
 
         // Notifica o usuário na tela que QUALQUER notificação foi vista pelo leitor
         showDiagnosticToast("🔔 Notificação de [$packageName]")
@@ -67,16 +73,16 @@ class BankNotificationService : NotificationListenerService() {
         // No modo debug/teste, se não achar no mapa de bancos, assume NUBANK
         val presetKey = bankPackageMap[packageName] ?: "NUBANK"
 
-        // PREVENÇÃO DE DUPLICATAS: Evita processar a exata mesma notificação em menos de 5 segundos
+        // PREVENÇÃO DE DUPLICATAS: Reduzido para 2 segundos para permitir testes rápidos
         val currentTime = System.currentTimeMillis()
-        if (content == lastProcessedContent && (currentTime - lastProcessedNotificationTime) < 5000) {
+        if (content == lastProcessedContent && (currentTime - lastProcessedNotificationTime) < 2000) {
             showDiagnosticToast("⚠️ Ignorada: Notificação duplicada recente.")
             return
         }
         lastProcessedNotificationTime = currentTime
         lastProcessedContent = content
 
-        // 1. Filtrar notificações indesejadas (Pix recebido, transferências, promoções)
+        // 1. Filtrar notificações indesejadas de recebimento/promoção
         val ignoreKeywords = listOf(
             "transferência recebida", "pix recebido", "você recebeu", 
             "dinheiro guardado", "rendimento", "promoção", "fatura fechada",
@@ -87,15 +93,9 @@ class BankNotificationService : NotificationListenerService() {
             return
         }
 
-        // 2. Garantir que tem o símbolo "R$" ou "R $ "
-        if (!content.contains("r$")) {
-            showDiagnosticToast("⚠️ Ignorada: Símbolo 'R$' não encontrado no texto.")
-            return
-        }
-
-        // 3. Regex para extrair valores em reais: R$ 1.500,90 ou R$ 45,00
-        val regex = Regex("""R\$\s*([\d\.,]+)""")
-        val match = regex.find(content)
+        // 2. Extrair valor numérico de Real R$ ou formato numérico decimal (ex: R$ 68,00 ou 68,00)
+        val regex = Regex("""(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+[\.,]\d{2})""", RegexOption.IGNORE_CASE)
+        val match = regex.find(rawContent)
 
         if (match != null) {
             val rawValue = match.groupValues[1]
@@ -107,14 +107,12 @@ class BankNotificationService : NotificationListenerService() {
                 return
             }
 
-            // 4. Extrair descrição da notificação original
-            val originalTitle = extras.getString(Notification.EXTRA_TITLE) ?: ""
-            val originalText = extras.getString(Notification.EXTRA_TEXT) ?: ""
-            val description = extrairDescricao(originalTitle, originalText)
+            // 3. Extrair descrição da notificação
+            val description = extrairDescricao(title, text.ifBlank { bigText })
 
             saveBillAutomatically(presetKey, description, amount)
         } else {
-            showDiagnosticToast("⚠️ Ignorada: Padrão R$ XX,XX não localizado no texto.")
+            showDiagnosticToast("⚠️ Ignorada: Valor em R$ não localizado na notificação.")
         }
     }
 
