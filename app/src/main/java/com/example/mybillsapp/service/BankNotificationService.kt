@@ -69,7 +69,8 @@ class BankNotificationService : NotificationListenerService() {
         val validKeywords = listOf(
             "compra", "aprovada", "pagamento", "transferência enviada", 
             "pix enviado", "pix realizado", "você pagou", "você transferiu",
-            "pagamento aprovado", "transferência realizada", "pix feito"
+            "pagamento aprovado", "transferência realizada", "pix feito",
+            "aprovado", "débito"
         )
         if (validKeywords.none { content.contains(it) }) {
             Log.d("BankNotification", "Notificação ignorada pois não parece ser uma transação de saída de dinheiro.")
@@ -97,19 +98,38 @@ class BankNotificationService : NotificationListenerService() {
     }
 
     private fun extrairDescricao(title: String, text: String): String {
+        // Combinamos título e texto para garantir que não perdemos o nome do estabelecimento
+        val fullContent = "$title $text"
+        
         // Tenta pegar palavras chave comuns em compras: "Compra aprovada em [Estabelecimento]"
-        val compraRegex = Regex("""(?:em|no|na|para)\s+([A-Za-z0-9\s*.\-&]+)""", RegexOption.IGNORE_CASE)
-        val match = compraRegex.find(text)
+        val compraRegex = Regex("""(?:em|no|na|para)\s+([A-Za-z0-9\s*.\-&]+?)(?=\s+para|\s+no valor|\s*$)""", RegexOption.IGNORE_CASE)
+        val match = compraRegex.find(fullContent)
         
         if (match != null && match.groupValues[1].isNotBlank()) {
-            val extracted = match.groupValues[1].trim()
-            // Limpa coisas como "no valor de" que a regex pode acabar pegando
-            if (!extracted.lowercase().startsWith("valor") && !extracted.lowercase().startsWith("r$")) {
-                return extracted
+            var extracted = match.groupValues[1].trim()
+            
+            // Limpezas extras baseadas na formatação do Nubank/Itaú
+            val cleanRegex = Regex("""(?i)^(o cartão|o crédito|crédito|débito|valor de|r\$).*""")
+            if (cleanRegex.matches(extracted)) {
+                // Se pegou lixo, tenta fallback para o título
+                 return fallbackDescricao(title)
             }
+            
+            // Remove coisas do tipo " para o cartão final..." que vêm coladas
+            val breakPoint = extracted.indexOf(" para o cartão")
+            if (breakPoint > 0) {
+                extracted = extracted.substring(0, breakPoint).trim()
+            }
+
+            return extracted
         }
         
-        return title.takeIf { it.isNotBlank() } ?: "Despesa Automática"
+        return fallbackDescricao(title)
+    }
+
+    private fun fallbackDescricao(title: String): String {
+        val cleanTitle = title.replace(Regex("""(?i)compra (no crédito|no débito)?\s?aprovada\s?:?"""), "").trim()
+        return cleanTitle.takeIf { it.isNotBlank() } ?: "Despesa Automática"
     }
 
     private fun saveBillAutomatically(presetKey: String, description: String, amount: Double) {
