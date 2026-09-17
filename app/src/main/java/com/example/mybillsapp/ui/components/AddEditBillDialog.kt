@@ -20,6 +20,7 @@ import com.example.mybillsapp.model.BillItem
 @Composable
 fun AddEditBillDialog(
     initialItem: BillItem? = null,
+    defaultDueDay: Int = 10,
     onDismiss: () -> Unit,
     onConfirm: (
         description: String,
@@ -46,7 +47,7 @@ fun AddEditBillDialog(
     }
     var installmentsInput by remember { mutableStateOf(initialItem?.totalInstallments?.toString() ?: "1") }
     var currentInstallmentInput by remember { mutableStateOf(initialItem?.currentInstallment?.toString() ?: "1") }
-    var dueDayInput by remember { mutableStateOf(initialItem?.dueDay?.toString() ?: "10") }
+    var dueDayInput by remember { mutableStateOf(initialItem?.dueDay?.toString() ?: defaultDueDay.toString()) }
     var selectedCategory by remember { mutableStateOf(initialItem?.category ?: BillCategory.OUTROS) }
     var notes by remember { mutableStateOf(initialItem?.notes ?: "") }
 
@@ -191,7 +192,7 @@ fun AddEditBillDialog(
                     val rawAmount = amountInput.toDoubleOrNull()
                     val installments = installmentsInput.toIntOrNull() ?: 1
                     val currentInstallment = (currentInstallmentInput.toIntOrNull() ?: 1).coerceIn(1, installments)
-                    val dueDay = (dueDayInput.toIntOrNull() ?: 10).coerceIn(1, 31)
+                    val dueDay = (dueDayInput.toIntOrNull() ?: defaultDueDay).coerceIn(1, 31)
 
                     if (description.isBlank()) {
                         errorMessage = "Por favor, informe a descrição."

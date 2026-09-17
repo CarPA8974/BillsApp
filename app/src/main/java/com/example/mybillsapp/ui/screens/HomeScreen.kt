@@ -247,7 +247,10 @@ fun HomeScreen(
 
     // Add Bill
     selectedBankForAddBill?.let { bankId ->
+        val bank = banks.find { it.id == bankId }
+        val defaultDue = bank?.defaultDueDay ?: 10
         AddEditBillDialog(
+            defaultDueDay = defaultDue,
             onDismiss = { selectedBankForAddBill = null },
             onConfirm = { desc, monthly, total, installments, current, dueDay, cat, notes ->
                 viewModel.addBill(
