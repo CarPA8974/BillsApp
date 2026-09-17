@@ -28,9 +28,10 @@ class BankNotificationService : NotificationListenerService() {
         "com.picpay" to "PICPAY",
         "br.com.uol.ps.myaccount" to "PAGBANK",
         "br.com.neon" to "NEON",
-        "org.kman.AquaMail" to "NUBANK", // Apenas para os testes com Fake Notification Apps
-        "com.app.fake.notification" to "NUBANK", // Outros package names de simuladores
-        "com.whatsapp.w4b" to "NUBANK" // Whatsapp Business para testes
+        "org.kman.AquaMail" to "NUBANK", // Testes com Fake Notification
+        "com.app.fake.notification" to "NUBANK", // Simuladores
+        "com.whatsapp.w4b" to "NUBANK", // WhatsApp Business
+        "com.whatsapp" to "NUBANK" // WhatsApp Normal
     )
 
     private val processedNotificationKeys = mutableSetOf<String>()
@@ -41,15 +42,10 @@ class BankNotificationService : NotificationListenerService() {
         }
     }
 
-    private fun showDiagnosticToast(message: String) {
-        Log.d("BankNotificationDiagnostic", message)
-    }
-
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         sbn?.let {
             processedNotificationKeys.remove(it.key)
-            Log.d("BankNotificationDiagnostic", "Notificação ${it.key} removida pelo usuário, limpando do cache.")
         }
     }
 
@@ -59,18 +55,16 @@ class BankNotificationService : NotificationListenerService() {
 
         val packageName = sbn.packageName
 
-        // Ignora notificações do próprio app para não criar loops
+        // Ignora notificações do próprio app
         if (packageName == applicationContext.packageName) return
 
         val notificationKey = sbn.key
         
-        // Se a notificação (id único fornecido pelo sistema Android) já foi processada com sucesso, ignora
+        // Evita processar a mesma notificação repetidamente
         if (processedNotificationKeys.contains(notificationKey)) {
-            Log.d("BankNotificationDiagnostic", "⚠️ Ignorada: Notificação já lida e processada.")
             return
         }
 
-        // Extrai texto de TODOS os campos possíveis de notificação do Android
         val extras = sbn.notification.extras
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
         val text = extras.getString(Notification.EXTRA_TEXT) ?: ""
@@ -81,43 +75,39 @@ class BankNotificationService : NotificationListenerService() {
         val rawContent = "$title $text $bigText $subText $ticker".trim()
         val content = rawContent.lowercase()
 
-        // No modo debug/teste, se não achar no mapa de bancos, não faz nada
-        val presetKey = bankPackageMap[packageName]
-        if (presetKey == null) {
-            Log.d("BankNotificationDiagnostic", "⚠️ Ignorada: O pacote [$packageName] não é de um banco oficial do sistema.")
-            return
-        }
+        // Identifica o banco ou assume NUBANK para testes
+        val presetKey = bankPackageMap[packageName] ?: "NUBANK"
 
-        // 1. Filtrar notificações indesejadas (Pix recebido, transferências, promoções)
+        // 1. FILTRAGEM RIGOROSA DE ENTRADA (Ignora dinheiro entrando, estornos, saldos, etc.)
         val ignoreKeywords = listOf(
             "transferência recebida", "pix recebido", "você recebeu", "recebido", "recebida",
             "dinheiro guardado", "rendimento", "promoção", "fatura fechada", "depositado",
             "pagamento recebido", "transferiu para você", "chegou um pix", "cashback",
             "estorno", "reembolso", "devolvido", "falhou", "negada", "cancelada", "recusada",
-            "não aprovada", "bloqueada", "código", "erro"
+            "não aprovada", "bloqueada", "código", "erro", "saldo", "limite"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
-            showDiagnosticToast("⚠️ Ignorada: Palavra de bloqueio detectada.")
+            Log.d("BankNotification", "Notificação ignorada por palavra de bloqueio.")
             return
         }
 
-        // 2. Garantir que tem o símbolo "R$" ou "R $ "
+        // 2. GARANTIR QUE TEM O SÍMBOLO R$
         if (!content.contains("r$")) {
-            showDiagnosticToast("⚠️ Ignorada: Símbolo 'R$' não encontrado no texto.")
+            Log.d("BankNotification", "Notificação ignorada: Sem R$.")
             return
         }
 
-        // 3. Garantir que é realmente uma saída de dinheiro com palavras de "Ação"
+        // 3. PALAVRAS-CHAVE AMPLAS E ROBUSTAS DE DÉBITO/COMPRA/PAGAMENTO
         val validKeywords = listOf(
-            "compra", "aprovada", "pagamento realizado", "pagamento aprovado", 
-            "transferência enviada", "pix enviado", "pix realizado", "você pagou", 
-            "você transferiu", "transferência realizada", "pix feito", "compra aprovada"
+            "compra", "aprovada", "aprovado", "pagamento", "pago", "débito",
+            "transferência", "pix", "gasto", "cartão", "efetuado", "realizado"
         )
         if (validKeywords.none { content.contains(it) }) {
-            showDiagnosticToast("⚠️ Ignorada: Não contém palavra que confirme débito/pagamento.")
+            Log.d("BankNotification", "Notificação ignorada: Sem palavra de débito/pagamento.")
             return
         }
-        // 4. Extrair valor numérico de Real R$
+
+        // 4. REGEX PARA EXTRAÇÃO DE VALORES (Ex: R$ 68,00 ou R$1.500,90)
         val regex = Regex("""(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+[\.,]\d{2})""", RegexOption.IGNORE_CASE)
         val match = regex.find(rawContent)
 
@@ -126,27 +116,22 @@ class BankNotificationService : NotificationListenerService() {
             val valueStr = rawValue.replace(".", "").replace(",", ".")
             val amount = valueStr.toDoubleOrNull()
             
-            if (amount == null || amount <= 0.0) {
-                showDiagnosticToast("⚠️ Ignorada: Valor numérico inválido ($rawValue)")
-                return
-            }
+            if (amount == null || amount <= 0.0) return
 
-            // 5. Extrair descrição da notificação
+            // 5. EXTRAÇÃO DA DESCRIÇÃO DO ESTABELECIMENTO
             val description = extrairDescricao(title, text.ifBlank { bigText })
 
             saveBillAutomatically(presetKey, description, amount)
             
-            // Marca a notificação como LIDA COM SUCESSO para não reprocessar no OnPosted duplo do Android
+            // Marca como processada
             processedNotificationKeys.add(notificationKey)
-            
-            // Controle de memória: se a lista crescer muito, mantém apenas as últimas 50 chaves
             if (processedNotificationKeys.size > 50) {
                 val iterator = processedNotificationKeys.iterator()
-                iterator.next()
-                iterator.remove()
+                if (iterator.hasNext()) {
+                    iterator.next()
+                    iterator.remove()
+                }
             }
-        } else {
-            showDiagnosticToast("⚠️ Ignorada: Valor em R$ não localizado na notificação.")
         }
     }
 
@@ -184,36 +169,36 @@ class BankNotificationService : NotificationListenerService() {
 
         val preset = BankPresets.getPresetByKey(presetKey)
         
-        // RECUPERA O MÊS QUE O USUÁRIO ESTÁ VISUALIZANDO ATUALMENTE NO APP!
         val prefs = applicationContext.getSharedPreferences("mybills_prefs", MODE_PRIVATE)
         val activeMonth = prefs.getInt("active_month", Calendar.getInstance().get(Calendar.MONTH))
         val activeYear = prefs.getInt("active_year", Calendar.getInstance().get(Calendar.YEAR))
         
-            val targetBank = currentBanks.find { it.presetKey == presetKey } ?: run {
-                val newBank = BankEntity(
-                    name = preset.name,
-                    colorHex = preset.hexColor,
-                    presetKey = preset.key
-                )
-                currentBanks.add(newBank)
-                newBank
-            }
-
-            val capDesc = description.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-
-            val newItem = BillItem(
-                description = capDesc,
-                monthlyAmount = amount,
-                totalAmount = amount,
-                totalInstallments = 1,
-                currentInstallment = 1,
-                dueDay = targetBank.defaultDueDay,
-                category = BillCategory.OUTROS,
-                isPaid = false,
-                notes = "Adicionado via notificação",
-                month = activeMonth,
-                year = activeYear
+        val targetBank = currentBanks.find { it.presetKey == presetKey } ?: run {
+            val newBank = BankEntity(
+                name = preset.name,
+                colorHex = preset.hexColor,
+                presetKey = preset.key,
+                defaultDueDay = 10
             )
+            currentBanks.add(newBank)
+            newBank
+        }
+
+        val capDesc = description.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+        val newItem = BillItem(
+            description = capDesc,
+            monthlyAmount = amount,
+            totalAmount = amount,
+            totalInstallments = 1,
+            currentInstallment = 1,
+            dueDay = targetBank.defaultDueDay,
+            category = BillCategory.OUTROS,
+            isPaid = false,
+            notes = "Adicionado via notificação",
+            month = activeMonth,
+            year = activeYear
+        )
 
         val updatedBank = targetBank.copy(items = targetBank.items + newItem)
         val index = currentBanks.indexOfFirst { it.id == targetBank.id }
@@ -222,11 +207,6 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         repository.saveData(currentBanks)
-        showDiagnosticToast("✅ SUCESSO! R$$amount salvo no ${preset.name}!")
-        Logd("BankNotification", "Despesa $description de R$$amount salva com SUCESSO no banco ${preset.name}")
-    }
-
-    private fun Logd(tag: String, msg: String) {
-        Log.d(tag, msg)
+        Log.d("BankNotification", "Despesa $description de R$$amount salva com SUCESSO no banco ${preset.name}")
     }
 }
