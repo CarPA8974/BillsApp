@@ -70,16 +70,17 @@ class BankNotificationService : NotificationListenerService() {
         val rawContent = "$title $text $bigText $subText $ticker".trim()
         val content = rawContent.lowercase()
 
-        // 1. FILTRAGEM RIGOROSA DE ENTRADA (Bloqueia recebimentos, estornos, saldos, etc.)
+        // 1. FILTRAGEM RIGOROSA DE ENTRADA (Bloqueia Pix, transferências, recebimentos, estornos, saldos, etc.)
         val ignoreKeywords = listOf(
-            "transferência recebida", "pix recebido", "você recebeu", "recebido", "recebida",
+            "pix", "transferência", "transferencia", "ted", "doc", "saque",
+            "recebido", "recebida", "você recebeu", 
             "dinheiro guardado", "rendimento", "promoção", "fatura fechada", "depositado",
             "pagamento recebido", "transferiu para você", "chegou um pix", "cashback",
             "estorno", "reembolso", "devolvido", "falhou", "negada", "cancelada", "recusada",
             "não aprovada", "bloqueada", "código", "erro", "saldo", "limite"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
-            Log.d("BankNotification", "Notificação ignorada por palavra de bloqueio.")
+            Log.d("BankNotification", "Notificação ignorada: Pix, transferência ou palavra bloqueada detectada.")
             return
         }
 
@@ -89,13 +90,12 @@ class BankNotificationService : NotificationListenerService() {
             return
         }
 
-        // 3. PALAVRAS-CHAVE OBRIGATÓRIAS DE DÉBITO/COMPRA
+        // 3. PALAVRAS-CHAVE RESTRITAS EXCLUSIVAMENTE A COMPRAS E PAGAMENTOS DE FATURA/BOLETO
         val validKeywords = listOf(
-            "compra", "aprovada", "aprovado", "pagamento", "pago", "débito",
-            "transferência", "pix", "gasto", "cartão", "efetuado", "realizado"
+            "compra", "aprovada", "aprovado", "pagamento", "pago", "boleto", "fatura"
         )
         if (validKeywords.none { content.contains(it) }) {
-            Log.d("BankNotification", "Notificação ignorada: Sem palavra de débito/pagamento.")
+            Log.d("BankNotification", "Notificação ignorada: Não é uma compra ou pagamento de fatura/boleto.")
             return
         }
 
