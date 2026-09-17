@@ -15,6 +15,7 @@ import java.util.Calendar
 
 class BankNotificationService : NotificationListenerService() {
 
+    // Lista oficial e exclusiva de aplicativos bancários (WhatsApp e apps de teste removidos para produção)
     private val bankPackageMap = mapOf(
         "com.nu.production" to "NUBANK",
         "com.itau" to "ITAU",
@@ -23,15 +24,10 @@ class BankNotificationService : NotificationListenerService() {
         "com.santander.app" to "SANTANDER",
         "br.com.bb.android" to "BANCO_DO_BRASIL",
         "br.com.bradesco.next" to "NEXT",
-        "br.com.brainweb.ifood" to "OUTRO",
         "com.mercadopago.wallet" to "MERCADO_PAGO",
         "com.picpay" to "PICPAY",
         "br.com.uol.ps.myaccount" to "PAGBANK",
-        "br.com.neon" to "NEON",
-        "org.kman.AquaMail" to "NUBANK", // Testes com Fake Notification
-        "com.app.fake.notification" to "NUBANK", // Simuladores
-        "com.whatsapp.w4b" to "NUBANK", // WhatsApp Business
-        "com.whatsapp" to "NUBANK" // WhatsApp Normal
+        "br.com.neon" to "NEON"
     )
 
     private val processedNotificationKeys = mutableSetOf<String>()
@@ -59,11 +55,10 @@ class BankNotificationService : NotificationListenerService() {
         if (packageName == applicationContext.packageName) return
 
         val notificationKey = sbn.key
-        
-        // Evita processar a mesma notificação repetidamente
-        if (processedNotificationKeys.contains(notificationKey)) {
-            return
-        }
+        if (processedNotificationKeys.contains(notificationKey)) return
+
+        // Verifica se o pacote pertence estritamente a um banco oficial
+        val presetKey = bankPackageMap[packageName] ?: return
 
         val extras = sbn.notification.extras
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
@@ -75,10 +70,7 @@ class BankNotificationService : NotificationListenerService() {
         val rawContent = "$title $text $bigText $subText $ticker".trim()
         val content = rawContent.lowercase()
 
-        // Identifica o banco ou assume NUBANK para testes
-        val presetKey = bankPackageMap[packageName] ?: "NUBANK"
-
-        // 1. FILTRAGEM RIGOROSA DE ENTRADA (Ignora dinheiro entrando, estornos, saldos, etc.)
+        // 1. FILTRAGEM RIGOROSA DE ENTRADA (Bloqueia recebimentos, estornos, saldos, etc.)
         val ignoreKeywords = listOf(
             "transferência recebida", "pix recebido", "você recebeu", "recebido", "recebida",
             "dinheiro guardado", "rendimento", "promoção", "fatura fechada", "depositado",
@@ -97,7 +89,7 @@ class BankNotificationService : NotificationListenerService() {
             return
         }
 
-        // 3. PALAVRAS-CHAVE AMPLAS E ROBUSTAS DE DÉBITO/COMPRA/PAGAMENTO
+        // 3. PALAVRAS-CHAVE OBRIGATÓRIAS DE DÉBITO/COMPRA
         val validKeywords = listOf(
             "compra", "aprovada", "aprovado", "pagamento", "pago", "débito",
             "transferência", "pix", "gasto", "cartão", "efetuado", "realizado"
@@ -186,6 +178,17 @@ class BankNotificationService : NotificationListenerService() {
 
         val capDesc = description.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
+        // PROTEÇÃO ANTIDUPLICIDADE ABSOLUTA: Verifica se já existe uma despesa idêntica neste exato mês/ano
+        val monthItems = targetBank.itemsForMonth(activeMonth, activeYear)
+        val isAlreadyRegistered = monthItems.any { 
+            it.description.equals(capDesc, ignoreCase = true) && it.monthlyAmount == amount 
+        }
+
+        if (isAlreadyRegistered) {
+            Log.d("BankNotification", "Despesa duplicada ignorada: $capDesc de R$$amount já existe em $activeMonth/$activeYear.")
+            return
+        }
+
         val newItem = BillItem(
             description = capDesc,
             monthlyAmount = amount,
@@ -207,6 +210,6 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         repository.saveData(currentBanks)
-        Log.d("BankNotification", "Despesa $description de R$$amount salva com SUCESSO no banco ${preset.name}")
+        Log.d("BankNotification", "Despesa $capDesc de R$$amount salva com SUCESSO no banco ${preset.name}")
     }
 }
