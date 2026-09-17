@@ -6,15 +6,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.model.BankEntity
-import com.example.mybillsapp.model.BankPreset
 import com.example.mybillsapp.model.BankPresets
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,13 +22,14 @@ import com.example.mybillsapp.model.BankPresets
 fun AddEditBankDialog(
     initialBank: BankEntity? = null,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, hexColor: String, presetKey: String) -> Unit
+    onConfirm: (name: String, hexColor: String, presetKey: String, defaultDueDay: Int) -> Unit
 ) {
     val isEditing = initialBank != null
 
     var name by remember { mutableStateOf(initialBank?.name ?: "") }
     var selectedPresetKey by remember { mutableStateOf(initialBank?.presetKey ?: "OUTRO") }
     var selectedHexColor by remember { mutableStateOf(initialBank?.colorHex ?: "#7C4DFF") }
+    var defaultDueDayStr by remember { mutableStateOf(initialBank?.defaultDueDay?.toString() ?: "10") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -87,13 +88,24 @@ fun AddEditBankDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Default Due Day Input
+                OutlinedTextField(
+                    value = defaultDueDayStr,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) defaultDueDayStr = it },
+                    label = { Text("Dia de Vencimento Padrão") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onConfirm(name.trim(), selectedHexColor, selectedPresetKey)
+                        val parsedDay = defaultDueDayStr.toIntOrNull()?.coerceIn(1, 31) ?: 10
+                        onConfirm(name.trim(), selectedHexColor, selectedPresetKey, parsedDay)
                     }
                 },
                 shape = RoundedCornerShape(12.dp)

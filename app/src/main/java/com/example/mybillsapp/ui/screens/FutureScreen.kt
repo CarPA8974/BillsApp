@@ -23,8 +23,11 @@ fun FutureScreen(
     isPrivacy: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val totalFutureDebt = banks.sumOf { it.subtotalFutureDebt }
-    val banksWithFutureDebt = banks.filter { it.subtotalFutureDebt > 0 }
+    // Esconder bancos que foram "deletados" (arquivados) da tela de futuro
+    val activeBanks = banks.filter { !it.isArchived || it.subtotalFutureDebt > 0 }
+    
+    val totalFutureDebt = activeBanks.sumOf { it.subtotalFutureDebt }
+    val banksWithFutureDebt = activeBanks.filter { it.subtotalFutureDebt > 0 }
 
     Column(
         modifier = modifier

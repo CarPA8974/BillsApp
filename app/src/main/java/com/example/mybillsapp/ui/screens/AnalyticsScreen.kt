@@ -38,9 +38,12 @@ fun AnalyticsScreen(
 ) {
     var selectedType by remember { mutableStateOf(AnalyticsType.BY_BANK) }
 
+    // Ignora bancos arquivados que não possuem itens naquele mês
+    val activeBanksForAnalytics = banks.filter { !it.isArchived || it.itemsForMonth(currentMonthYear.month, currentMonthYear.year).isNotEmpty() }
+
     // Obter todas as faturas do mês selecionado
-    val activeMonthBills = remember(banks, currentMonthYear) {
-        banks.flatMap { it.itemsForMonth(currentMonthYear.month, currentMonthYear.year) }
+    val activeMonthBills = remember(activeBanksForAnalytics, currentMonthYear) {
+        activeBanksForAnalytics.flatMap { it.itemsForMonth(currentMonthYear.month, currentMonthYear.year) }
     }
 
     val totalMonthAmount = remember(activeMonthBills) {
@@ -48,8 +51,8 @@ fun AnalyticsScreen(
     }
 
     // Slices for By Bank
-    val bankSlices = remember(banks, currentMonthYear) {
-        banks.mapNotNull { bank ->
+    val bankSlices = remember(activeBanksForAnalytics, currentMonthYear) {
+        activeBanksForAnalytics.mapNotNull { bank ->
             val sum = bank.subtotalMonth(currentMonthYear.month, currentMonthYear.year)
             if (sum > 0) {
                 ChartSlice(

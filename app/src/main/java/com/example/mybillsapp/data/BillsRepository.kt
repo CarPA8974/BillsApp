@@ -48,8 +48,13 @@ class BillsRepository(context: Context) {
                         bank.colorHex
                     } else preset?.hexColor ?: BankPresets.presets[(bank.colorIndex.coerceAtLeast(0)) % BankPresets.presets.size].hexColor
 
+                    val safeDefaultDueDay = if (bank.defaultDueDay in 1..31) bank.defaultDueDay else 10
+                    val safeIsArchived = bank.isArchived
+
                     bank.copy(
                         colorHex = safeHex,
+                        defaultDueDay = safeDefaultDueDay,
+                        isArchived = safeIsArchived,
                         items = bank.items.map { item ->
                             val safeCategory = item.category
                             val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10

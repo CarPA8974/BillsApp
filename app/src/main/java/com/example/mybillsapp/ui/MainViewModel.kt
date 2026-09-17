@@ -11,6 +11,7 @@ import com.example.mybillsapp.model.MonthYear
 import com.example.mybillsapp.ui.components.StatusFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.Locale
 import java.util.UUID
 
 enum class NavTab(val label: String) {
@@ -96,25 +97,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveActiveMonth(prev)
     }
 
-    fun addBank(name: String, hexColor: String, presetKey: String) {
+    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int) {
         val newBank = BankEntity(
             name = name,
             colorHex = hexColor,
-            presetKey = presetKey
+            presetKey = presetKey,
+            defaultDueDay = defaultDueDay
         )
         updateData(_banks.value + newBank)
     }
 
-    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String) {
+    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int) {
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
-                bank.copy(name = name, colorHex = hexColor, presetKey = presetKey)
+                bank.copy(name = name, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay)
             } else bank
         })
     }
 
     fun removeBank(bankId: String) {
-        updateData(_banks.value.filter { it.id != bankId })
+        updateData(_banks.value.map { bank ->
+            if (bank.id == bankId) {
+                bank.copy(isArchived = true)
+            } else bank
+        })
     }
 
     fun addBill(
@@ -129,10 +135,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         notes: String
     ) {
         val activeMonth = _currentMonthYear.value
+        val capDesc = description.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
                 val newItem = BillItem(
-                    description = description,
+                    description = capDesc,
                     monthlyAmount = monthlyAmount,
                     totalAmount = totalAmount,
                     totalInstallments = installments,
@@ -161,12 +169,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         category: BillCategory,
         notes: String
     ) {
+        val capDesc = description.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
                 bank.copy(items = bank.items.map { item ->
                     if (item.id == billId) {
                         item.copy(
-                            description = description,
+                            description = capDesc,
                             monthlyAmount = monthlyAmount,
                             totalAmount = totalAmount,
                             totalInstallments = installments,

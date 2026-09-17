@@ -19,7 +19,9 @@ data class BankEntity(
     val items: List<BillItem> = emptyList(),
     val colorHex: String = "#7C4DFF",
     val presetKey: String = "OUTRO",
-    val colorIndex: Int = 0 // For backwards compatibility
+    val colorIndex: Int = 0, // For backwards compatibility
+    val defaultDueDay: Int = 10,
+    val isArchived: Boolean = false
 ) {
     fun itemsForMonth(month: Int, year: Int): List<BillItem> {
         return items.filter { it.month == month && it.year == year }

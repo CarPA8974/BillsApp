@@ -233,8 +233,8 @@ fun AppMainContent(viewModel: MainViewModel = viewModel()) {
     if (showAddBankDialog) {
         AddEditBankDialog(
             onDismiss = { showAddBankDialog = false },
-            onConfirm = { name, hexColor, presetKey ->
-                viewModel.addBank(name, hexColor, presetKey)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay ->
+                viewModel.addBank(name, hexColor, presetKey, defaultDueDay)
                 showAddBankDialog = false
             }
         )

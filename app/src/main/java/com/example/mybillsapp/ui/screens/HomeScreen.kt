@@ -55,7 +55,7 @@ fun HomeScreen(
 
     val overdueCount = if (isCurrentMonth) allItemsForMonth.count { it.isOverdue() } else 0
 
-    // Filter banks & bills for the active month/year
+    // Filter banks & bills for the active month/year (Hide archived banks if they have no active items in the selected month)
     val filteredBanks = remember(banks, currentMonthYear, searchQuery, statusFilter, categoryFilter) {
         banks.mapNotNull { bank ->
             val monthItems = bank.itemsForMonth(currentMonthYear.month, currentMonthYear.year)
@@ -79,7 +79,10 @@ fun HomeScreen(
                 matchesSearch && matchesStatus && matchesCategory
             }
 
-            if (filteredItems.isNotEmpty() || searchQuery.isBlank()) {
+            // Only show archived banks IF they have bills in this specific month
+            val isVisible = if (bank.isArchived) filteredItems.isNotEmpty() else (filteredItems.isNotEmpty() || searchQuery.isBlank())
+            
+            if (isVisible) {
                 bank.copy(items = filteredItems)
             } else null
         }
@@ -120,10 +123,10 @@ fun HomeScreen(
                     IconButton(onClick = { viewModel.nextMonth() }) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
                     }
-                    IconButton(onClick = { viewModel.reloadData() }) {
+                    IconButton(onClick = { showAdvanceCycleDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Atualizar",
+                            imageVector = Icons.Default.Autorenew,
+                            contentDescription = "Virar Mês",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -210,8 +213,8 @@ fun HomeScreen(
     if (showAddBankDialog) {
         AddEditBankDialog(
             onDismiss = { showAddBankDialog = false },
-            onConfirm = { name, hexColor, presetKey ->
-                viewModel.addBank(name, hexColor, presetKey)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay ->
+                viewModel.addBank(name, hexColor, presetKey, defaultDueDay)
                 showAddBankDialog = false
             }
         )
@@ -222,8 +225,8 @@ fun HomeScreen(
         AddEditBankDialog(
             initialBank = bank,
             onDismiss = { editingBank = null },
-            onConfirm = { name, hexColor, presetKey ->
-                viewModel.editBank(bank.id, name, hexColor, presetKey)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay ->
+                viewModel.editBank(bank.id, name, hexColor, presetKey, defaultDueDay)
                 editingBank = null
             }
         )

@@ -189,29 +189,31 @@ class BankNotificationService : NotificationListenerService() {
         val activeMonth = prefs.getInt("active_month", Calendar.getInstance().get(Calendar.MONTH))
         val activeYear = prefs.getInt("active_year", Calendar.getInstance().get(Calendar.YEAR))
         
-        var targetBank = currentBanks.find { it.presetKey == presetKey }
-        if (targetBank == null) {
-            targetBank = BankEntity(
-                name = preset.name,
-                colorHex = preset.hexColor,
-                presetKey = preset.key
-            )
-            currentBanks.add(targetBank)
-        }
+            val targetBank = currentBanks.find { it.presetKey == presetKey } ?: run {
+                val newBank = BankEntity(
+                    name = preset.name,
+                    colorHex = preset.hexColor,
+                    presetKey = preset.key
+                )
+                currentBanks.add(newBank)
+                newBank
+            }
 
-        val newItem = BillItem(
-            description = description,
-            monthlyAmount = amount,
-            totalAmount = amount,
-            totalInstallments = 1,
-            currentInstallment = 1,
-            dueDay = 10,
-            category = BillCategory.OUTROS,
-            isPaid = false,
-            notes = "Adicionado via notificação",
-            month = activeMonth,
-            year = activeYear
-        )
+            val capDesc = description.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
+            val newItem = BillItem(
+                description = capDesc,
+                monthlyAmount = amount,
+                totalAmount = amount,
+                totalInstallments = 1,
+                currentInstallment = 1,
+                dueDay = targetBank.defaultDueDay,
+                category = BillCategory.OUTROS,
+                isPaid = false,
+                notes = "Adicionado via notificação",
+                month = activeMonth,
+                year = activeYear
+            )
 
         val updatedBank = targetBank.copy(items = targetBank.items + newItem)
         val index = currentBanks.indexOfFirst { it.id == targetBank.id }
