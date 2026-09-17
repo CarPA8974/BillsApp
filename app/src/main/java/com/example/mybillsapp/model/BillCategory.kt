@@ -18,7 +18,7 @@ enum class BillCategory(
     SAUDE("Saúde & Bem-estar", Icons.Default.LocalHospital, Color(0xFFF44336)),
     ASSINATURAS("Assinaturas", Icons.Default.Subscriptions, Color(0xFF00BCD4)),
     EDUCACAO("Educação", Icons.Default.School, Color(0xFF3F51B5)),
-    OUTROS("Outros", Icons.Default.MoreHoriz, Color(0xFF9E9E9E));
+    OUTROS("Outros", Icons.Default.Receipt, Color(0xFF9E9E9E));
 
     companion object {
         fun fromString(name: String?): BillCategory {
