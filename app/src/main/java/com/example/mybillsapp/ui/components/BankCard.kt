@@ -79,7 +79,7 @@ fun BankCard(
                         text = if (isPrivacy) "R$ ****" else "Falta " + valueToShow.toCurrency(),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (showFuture) MaterialTheme.colorScheme.onSurfaceVariant else bankColor
+                        color = if (showFuture) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -151,8 +151,8 @@ fun BankCard(
                                 .fillMaxWidth()
                                 .padding(top = 12.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, bankColor.copy(alpha = 0.6f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = bankColor)
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))

@@ -36,7 +36,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentNavTab = MutableStateFlow(NavTab.HOME)
     val currentNavTab = _currentNavTab.asStateFlow()
 
-    private val _currentMonthYear = MutableStateFlow(MonthYear.current().nextMonth())
+    private val _currentMonthYear = MutableStateFlow(MonthYear.current())
     val currentMonthYear = _currentMonthYear.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -53,9 +53,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.setOnDataChangeListener {
             reloadData()
         }
+
+        val savedMonth = prefs.getInt("active_month", -1)
+        val savedYear = prefs.getInt("active_year", -1)
+        
+        if (savedMonth != -1 && savedYear != -1) {
+            _currentMonthYear.value = MonthYear(savedMonth, savedYear)
+        } else {
+            val defaultMonth = MonthYear.current().nextMonth()
+            _currentMonthYear.value = defaultMonth
+            saveActiveMonth(defaultMonth)
+        }
+
         if (prefs.getBoolean("is_first_access_v1", true)) {
             _showWelcomeDialog.value = true
         }
+    }
+
+    private fun saveActiveMonth(my: MonthYear) {
+        prefs.edit().putInt("active_month", my.month).putInt("active_year", my.year).apply()
     }
 
     fun dismissWelcomeDialog() {
@@ -69,8 +85,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setStatusFilter(filter: StatusFilter) { _statusFilter.value = filter }
     fun setCategoryFilter(category: BillCategory?) { _categoryFilter.value = category }
 
-    fun nextMonth() { _currentMonthYear.value = _currentMonthYear.value.nextMonth() }
-    fun previousMonth() { _currentMonthYear.value = _currentMonthYear.value.previousMonth() }
+    fun nextMonth() { 
+        val next = _currentMonthYear.value.nextMonth()
+        _currentMonthYear.value = next
+        saveActiveMonth(next)
+    }
+    fun previousMonth() { 
+        val prev = _currentMonthYear.value.previousMonth()
+        _currentMonthYear.value = prev
+        saveActiveMonth(prev)
+    }
 
     fun addBank(name: String, hexColor: String, presetKey: String) {
         val newBank = BankEntity(
@@ -210,6 +234,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         updateData(updatedBanks)
         _currentMonthYear.value = nextMonth
+        saveActiveMonth(nextMonth)
     }
 
     fun reloadData() {

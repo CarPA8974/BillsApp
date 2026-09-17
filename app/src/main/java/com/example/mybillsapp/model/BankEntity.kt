@@ -21,11 +21,8 @@ data class BankEntity(
     val presetKey: String = "OUTRO",
     val colorIndex: Int = 0 // For backwards compatibility
 ) {
-    // Retorna as faturas do mês específico. Se ainda não houver faturas geradas para este mês,
-    // exibe as faturas ativas do banco para que os dados NUNCA desapareçam da tela!
     fun itemsForMonth(month: Int, year: Int): List<BillItem> {
-        val monthSpecific = items.filter { it.month == month && it.year == year }
-        return if (monthSpecific.isNotEmpty()) monthSpecific else items
+        return items.filter { it.month == month && it.year == year }
     }
 
     fun subtotalMonth(month: Int, year: Int): Double = itemsForMonth(month, year).sumOf { it.monthlyAmount }

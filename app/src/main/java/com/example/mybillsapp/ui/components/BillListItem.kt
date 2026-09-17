@@ -94,13 +94,13 @@ fun BillListItem(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(item.category.color.copy(alpha = 0.15f)),
+                    .background(item.category.color.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = item.category.icon,
                     contentDescription = item.category.displayName,
-                    tint = item.category.color,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(20.dp)
                 )
             }

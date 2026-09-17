@@ -14,6 +14,7 @@ import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
 import com.example.mybillsapp.model.BillCategory
 import com.example.mybillsapp.model.BillItem
+import java.util.Calendar
 
 class BankNotificationService : NotificationListenerService() {
 
@@ -42,9 +43,8 @@ class BankNotificationService : NotificationListenerService() {
     }
 
     private fun showDiagnosticToast(message: String) {
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
-        }
+        // Removido os pop-ups visuais para não atrapalhar o uso do celular
+        Log.d("BankNotificationDiagnostic", message)
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -82,18 +82,36 @@ class BankNotificationService : NotificationListenerService() {
         lastProcessedNotificationTime = currentTime
         lastProcessedContent = content
 
-        // 1. Filtrar notificações indesejadas de recebimento/promoção
+        // 1. Filtrar notificações indesejadas (Pix recebido, transferências, promoções)
         val ignoreKeywords = listOf(
-            "transferência recebida", "pix recebido", "você recebeu", 
-            "dinheiro guardado", "rendimento", "promoção", "fatura fechada",
-            "pagamento recebido", "transferiu para você", "chegou um pix"
+            "transferência recebida", "pix recebido", "você recebeu", "recebido", "recebida",
+            "dinheiro guardado", "rendimento", "promoção", "fatura fechada", "depositado",
+            "pagamento recebido", "transferiu para você", "chegou um pix", "cashback",
+            "estorno", "reembolso", "devolvido", "falhou", "negada", "cancelada", "recusada",
+            "não aprovada", "bloqueada", "código", "erro"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
-            showDiagnosticToast("⚠️ Ignorada: Palavra de recebimento/promoção detectada.")
+            showDiagnosticToast("⚠️ Ignorada: Palavra de bloqueio detectada.")
             return
         }
 
-        // 2. Extrair valor numérico de Real R$ ou formato numérico decimal (ex: R$ 68,00 ou 68,00)
+        // 2. Garantir que tem o símbolo "R$" ou "R $ "
+        if (!content.contains("r$")) {
+            showDiagnosticToast("⚠️ Ignorada: Símbolo 'R$' não encontrado no texto.")
+            return
+        }
+
+        // 3. Garantir que é realmente uma saída de dinheiro com palavras de "Ação"
+        val validKeywords = listOf(
+            "compra", "aprovada", "pagamento realizado", "pagamento aprovado", 
+            "transferência enviada", "pix enviado", "pix realizado", "você pagou", 
+            "você transferiu", "transferência realizada", "pix feito", "compra aprovada"
+        )
+        if (validKeywords.none { content.contains(it) }) {
+            showDiagnosticToast("⚠️ Ignorada: Não contém palavra que confirme débito/pagamento.")
+            return
+        }
+        // 4. Extrair valor numérico de Real R$
         val regex = Regex("""(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+[\.,]\d{2})""", RegexOption.IGNORE_CASE)
         val match = regex.find(rawContent)
 
@@ -107,7 +125,7 @@ class BankNotificationService : NotificationListenerService() {
                 return
             }
 
-            // 3. Extrair descrição da notificação
+            // 5. Extrair descrição da notificação
             val description = extrairDescricao(title, text.ifBlank { bigText })
 
             saveBillAutomatically(presetKey, description, amount)
@@ -150,6 +168,11 @@ class BankNotificationService : NotificationListenerService() {
 
         val preset = BankPresets.getPresetByKey(presetKey)
         
+        // RECUPERA O MÊS QUE O USUÁRIO ESTÁ VISUALIZANDO ATUALMENTE NO APP!
+        val prefs = applicationContext.getSharedPreferences("mybills_prefs", MODE_PRIVATE)
+        val activeMonth = prefs.getInt("active_month", Calendar.getInstance().get(Calendar.MONTH))
+        val activeYear = prefs.getInt("active_year", Calendar.getInstance().get(Calendar.YEAR))
+        
         var targetBank = currentBanks.find { it.presetKey == presetKey }
         if (targetBank == null) {
             targetBank = BankEntity(
@@ -169,7 +192,9 @@ class BankNotificationService : NotificationListenerService() {
             dueDay = 10,
             category = BillCategory.OUTROS,
             isPaid = false,
-            notes = "Adicionado automaticamente via notificação"
+            notes = "Adicionado via notificação",
+            month = activeMonth,
+            year = activeYear
         )
 
         val updatedBank = targetBank.copy(items = targetBank.items + newItem)
