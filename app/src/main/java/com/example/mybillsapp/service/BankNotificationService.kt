@@ -3,12 +3,9 @@ package com.example.mybillsapp.service
 import android.app.Notification
 import android.content.ComponentName
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import android.widget.Toast
 import com.example.mybillsapp.data.BillsRepository
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
@@ -30,11 +27,13 @@ class BankNotificationService : NotificationListenerService() {
         "com.mercadopago.wallet" to "MERCADO_PAGO",
         "com.picpay" to "PICPAY",
         "br.com.uol.ps.myaccount" to "PAGBANK",
-        "br.com.neon" to "NEON"
+        "br.com.neon" to "NEON",
+        "org.kman.AquaMail" to "NUBANK", // Apenas para os testes com Fake Notification Apps
+        "com.app.fake.notification" to "NUBANK", // Outros package names de simuladores
+        "com.whatsapp.w4b" to "NUBANK" // Whatsapp Business para testes
     )
 
-    private var lastProcessedNotificationTime: Long = 0
-    private var lastProcessedContent: String = ""
+    private val processedNotificationKeys = mutableSetOf<String>()
 
     companion object {
         fun forceRebind(context: Context) {
@@ -43,8 +42,15 @@ class BankNotificationService : NotificationListenerService() {
     }
 
     private fun showDiagnosticToast(message: String) {
-        // Removido os pop-ups visuais para não atrapalhar o uso do celular
         Log.d("BankNotificationDiagnostic", message)
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        sbn?.let {
+            processedNotificationKeys.remove(it.key)
+            Log.d("BankNotificationDiagnostic", "Notificação ${it.key} removida pelo usuário, limpando do cache.")
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -55,6 +61,14 @@ class BankNotificationService : NotificationListenerService() {
 
         // Ignora notificações do próprio app para não criar loops
         if (packageName == applicationContext.packageName) return
+
+        val notificationKey = sbn.key
+        
+        // Se a notificação (id único fornecido pelo sistema Android) já foi processada com sucesso, ignora
+        if (processedNotificationKeys.contains(notificationKey)) {
+            Log.d("BankNotificationDiagnostic", "⚠️ Ignorada: Notificação já lida e processada.")
+            return
+        }
 
         // Extrai texto de TODOS os campos possíveis de notificação do Android
         val extras = sbn.notification.extras
@@ -67,20 +81,12 @@ class BankNotificationService : NotificationListenerService() {
         val rawContent = "$title $text $bigText $subText $ticker".trim()
         val content = rawContent.lowercase()
 
-        // Notifica o usuário na tela que QUALQUER notificação foi vista pelo leitor
-        showDiagnosticToast("🔔 Notificação de [$packageName]")
-
-        // No modo debug/teste, se não achar no mapa de bancos, assume NUBANK
-        val presetKey = bankPackageMap[packageName] ?: "NUBANK"
-
-        // PREVENÇÃO DE DUPLICATAS: Reduzido para 2 segundos para permitir testes rápidos
-        val currentTime = System.currentTimeMillis()
-        if (content == lastProcessedContent && (currentTime - lastProcessedNotificationTime) < 2000) {
-            showDiagnosticToast("⚠️ Ignorada: Notificação duplicada recente.")
+        // No modo debug/teste, se não achar no mapa de bancos, não faz nada
+        val presetKey = bankPackageMap[packageName]
+        if (presetKey == null) {
+            Log.d("BankNotificationDiagnostic", "⚠️ Ignorada: O pacote [$packageName] não é de um banco oficial do sistema.")
             return
         }
-        lastProcessedNotificationTime = currentTime
-        lastProcessedContent = content
 
         // 1. Filtrar notificações indesejadas (Pix recebido, transferências, promoções)
         val ignoreKeywords = listOf(
@@ -129,6 +135,16 @@ class BankNotificationService : NotificationListenerService() {
             val description = extrairDescricao(title, text.ifBlank { bigText })
 
             saveBillAutomatically(presetKey, description, amount)
+            
+            // Marca a notificação como LIDA COM SUCESSO para não reprocessar no OnPosted duplo do Android
+            processedNotificationKeys.add(notificationKey)
+            
+            // Controle de memória: se a lista crescer muito, mantém apenas as últimas 50 chaves
+            if (processedNotificationKeys.size > 50) {
+                val iterator = processedNotificationKeys.iterator()
+                iterator.next()
+                iterator.remove()
+            }
         } else {
             showDiagnosticToast("⚠️ Ignorada: Valor em R$ não localizado na notificação.")
         }

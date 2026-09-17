@@ -124,19 +124,6 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Como usar o aplicativo")
                     }
-
-                    OutlinedButton(
-                        onClick = {
-                            BankNotificationService.forceRebind(context)
-                            Toast.makeText(context, "Serviço de Leitura Reconectado com Sucesso!", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Reconectar Leitor de Notificações")
-                    }
                 }
             }
         }

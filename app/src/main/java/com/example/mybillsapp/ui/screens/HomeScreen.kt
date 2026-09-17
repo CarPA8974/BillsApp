@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -119,10 +120,10 @@ fun HomeScreen(
                     IconButton(onClick = { viewModel.nextMonth() }) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
                     }
-                    IconButton(onClick = { showAdvanceCycleDialog = true }) {
+                    IconButton(onClick = { viewModel.reloadData() }) {
                         Icon(
-                            imageVector = Icons.Default.Autorenew,
-                            contentDescription = "Virar Mês",
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Atualizar",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
