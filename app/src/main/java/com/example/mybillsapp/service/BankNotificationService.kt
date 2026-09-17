@@ -20,11 +20,13 @@ class BankNotificationService : NotificationListenerService() {
         "com.santander.app" to "SANTANDER",
         "br.com.bb.android" to "BANCO_DO_BRASIL",
         "br.com.bradesco.next" to "NEXT",
-        "br.com.brainweb.ifood" to "OUTRO", // Se quiser capturar do ifood
+        "br.com.brainweb.ifood" to "OUTRO",
         "com.mercadopago.wallet" to "MERCADO_PAGO",
         "com.picpay" to "PICPAY",
         "br.com.uol.ps.myaccount" to "PAGBANK",
-        "br.com.neon" to "NEON"
+        "br.com.neon" to "NEON",
+        "org.kman.AquaMail" to "NUBANK", // Apenas para os testes com Fake Notification Apps
+        "com.app.fake.notification" to "NUBANK" // Outros package names de simuladores
     )
 
     private var lastProcessedNotificationTime: Long = 0
@@ -35,7 +37,12 @@ class BankNotificationService : NotificationListenerService() {
         if (sbn == null) return
 
         val packageName = sbn.packageName
-        val presetKey = bankPackageMap[packageName] ?: return
+        
+        // --- LOG PARA DEBUG DE NOTIFICAÇÕES FAKE ---
+        Log.d("BankNotification", "Package detectado: $packageName | Title: ${sbn.notification.extras.getString(Notification.EXTRA_TITLE)}")
+        
+        // No modo debug/teste, se não achar no mapa de bancos, assume NUBANK para que você consiga testar com qualquer app!
+        val presetKey = bankPackageMap[packageName] ?: "NUBANK"
 
         val extras = sbn.notification.extras
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
