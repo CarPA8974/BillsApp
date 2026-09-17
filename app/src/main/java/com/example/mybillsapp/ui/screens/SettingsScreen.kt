@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.mybillsapp.service.BankNotificationService
 import com.example.mybillsapp.ui.MainViewModel
 import com.example.mybillsapp.ui.components.HelpWelcomeDialog
 
@@ -110,7 +111,10 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Button(
                         onClick = { showHelpDialog = true },
                         modifier = Modifier.fillMaxWidth(),
@@ -119,6 +123,19 @@ fun SettingsScreen(
                         Icon(Icons.Default.HelpOutline, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Como usar o aplicativo")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            BankNotificationService.forceRebind(context)
+                            Toast.makeText(context, "Serviço de Leitura Reconectado com Sucesso!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Reconectar Leitor de Notificações")
                     }
                 }
             }

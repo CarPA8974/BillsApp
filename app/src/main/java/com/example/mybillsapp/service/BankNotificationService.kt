@@ -1,9 +1,14 @@
 package com.example.mybillsapp.service
 
 import android.app.Notification
+import android.content.ComponentName
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import android.widget.Toast
 import com.example.mybillsapp.data.BillsRepository
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
@@ -24,41 +29,52 @@ class BankNotificationService : NotificationListenerService() {
         "com.mercadopago.wallet" to "MERCADO_PAGO",
         "com.picpay" to "PICPAY",
         "br.com.uol.ps.myaccount" to "PAGBANK",
-        "br.com.neon" to "NEON",
-        "org.kman.AquaMail" to "NUBANK", // Apenas para os testes com Fake Notification Apps
-        "com.app.fake.notification" to "NUBANK" // Outros package names de simuladores
+        "br.com.neon" to "NEON"
     )
 
     private var lastProcessedNotificationTime: Long = 0
     private var lastProcessedContent: String = ""
+
+    companion object {
+        fun forceRebind(context: Context) {
+            requestRebind(ComponentName(context, BankNotificationService::class.java))
+        }
+    }
+
+    private fun showDiagnosticToast(message: String) {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn == null) return
 
         val packageName = sbn.packageName
-        
-        // --- LOG PARA DEBUG DE NOTIFICAÇÕES FAKE ---
-        Log.d("BankNotification", "Package detectado: $packageName | Title: ${sbn.notification.extras.getString(Notification.EXTRA_TITLE)}")
-        
-        // No modo debug/teste, se não achar no mapa de bancos, assume NUBANK para que você consiga testar com qualquer app!
-        val presetKey = bankPackageMap[packageName] ?: "NUBANK"
+
+        // Ignora notificações do próprio app para não criar loops
+        if (packageName == applicationContext.packageName) return
 
         val extras = sbn.notification.extras
         val title = extras.getString(Notification.EXTRA_TITLE) ?: ""
         val text = extras.getString(Notification.EXTRA_TEXT) ?: ""
         val content = "$title $text".lowercase()
 
+        // Notifica o usuário na tela que QUALQUER notificação foi vista pelo leitor
+        showDiagnosticToast("🔔 Notificação de [$packageName]")
+
+        // No modo debug/teste, se não achar no mapa de bancos, assume NUBANK
+        val presetKey = bankPackageMap[packageName] ?: "NUBANK"
+
         // PREVENÇÃO DE DUPLICATAS: Evita processar a exata mesma notificação em menos de 5 segundos
         val currentTime = System.currentTimeMillis()
         if (content == lastProcessedContent && (currentTime - lastProcessedNotificationTime) < 5000) {
-            Log.d("BankNotification", "Notificação duplicada ignorada (Tempo: ${currentTime - lastProcessedNotificationTime}ms)")
+            showDiagnosticToast("⚠️ Ignorada: Notificação duplicada recente.")
             return
         }
         lastProcessedNotificationTime = currentTime
         lastProcessedContent = content
-
-        Log.d("BankNotification", "Recebida de $presetKey: $content")
 
         // 1. Filtrar notificações indesejadas (Pix recebido, transferências, promoções)
         val ignoreKeywords = listOf(
@@ -67,20 +83,13 @@ class BankNotificationService : NotificationListenerService() {
             "pagamento recebido", "transferiu para você", "chegou um pix"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
-            Log.d("BankNotification", "Notificação ignorada por conter palavra reservada de recebimento/info.")
+            showDiagnosticToast("⚠️ Ignorada: Palavra de recebimento/promoção detectada.")
             return
         }
 
-        // 2. Garantir que é uma notificação de "saída" de dinheiro (compra, pagamento, pix enviado)
-        // Adicionado "pix feito" e "transferência realizada"
-        val validKeywords = listOf(
-            "compra", "aprovada", "pagamento", "transferência enviada", 
-            "pix enviado", "pix realizado", "você pagou", "você transferiu",
-            "pagamento aprovado", "transferência realizada", "pix feito",
-            "aprovado", "débito"
-        )
-        if (validKeywords.none { content.contains(it) }) {
-            Log.d("BankNotification", "Notificação ignorada pois não parece ser uma transação de saída de dinheiro.")
+        // 2. Garantir que tem o símbolo "R$" ou "R $ "
+        if (!content.contains("r$")) {
+            showDiagnosticToast("⚠️ Ignorada: Símbolo 'R$' não encontrado no texto.")
             return
         }
 
@@ -91,38 +100,36 @@ class BankNotificationService : NotificationListenerService() {
         if (match != null) {
             val rawValue = match.groupValues[1]
             val valueStr = rawValue.replace(".", "").replace(",", ".")
-            val amount = valueStr.toDoubleOrNull() ?: return
+            val amount = valueStr.toDoubleOrNull()
+            
+            if (amount == null || amount <= 0.0) {
+                showDiagnosticToast("⚠️ Ignorada: Valor numérico inválido ($rawValue)")
+                return
+            }
 
-            // 4. Extrair descrição da notificação original (mantendo o case)
+            // 4. Extrair descrição da notificação original
             val originalTitle = extras.getString(Notification.EXTRA_TITLE) ?: ""
             val originalText = extras.getString(Notification.EXTRA_TEXT) ?: ""
             val description = extrairDescricao(originalTitle, originalText)
 
             saveBillAutomatically(presetKey, description, amount)
         } else {
-             Log.d("BankNotification", "Valor em R$ não encontrado na notificação.")
+            showDiagnosticToast("⚠️ Ignorada: Padrão R$ XX,XX não localizado no texto.")
         }
     }
 
     private fun extrairDescricao(title: String, text: String): String {
-        // Combinamos título e texto para garantir que não perdemos o nome do estabelecimento
         val fullContent = "$title $text"
-        
-        // Tenta pegar palavras chave comuns em compras: "Compra aprovada em [Estabelecimento]"
         val compraRegex = Regex("""(?:em|no|na|para)\s+([A-Za-z0-9\s*.\-&]+?)(?=\s+para|\s+no valor|\s*$)""", RegexOption.IGNORE_CASE)
         val match = compraRegex.find(fullContent)
         
         if (match != null && match.groupValues[1].isNotBlank()) {
             var extracted = match.groupValues[1].trim()
-            
-            // Limpezas extras baseadas na formatação do Nubank/Itaú
             val cleanRegex = Regex("""(?i)^(o cartão|o crédito|crédito|débito|valor de|r\$).*""")
             if (cleanRegex.matches(extracted)) {
-                // Se pegou lixo, tenta fallback para o título
                  return fallbackDescricao(title)
             }
             
-            // Remove coisas do tipo " para o cartão final..." que vêm coladas
             val breakPoint = extracted.indexOf(" para o cartão")
             if (breakPoint > 0) {
                 extracted = extracted.substring(0, breakPoint).trim()
@@ -145,7 +152,6 @@ class BankNotificationService : NotificationListenerService() {
 
         val preset = BankPresets.getPresetByKey(presetKey)
         
-        // Encontra o banco ou cria se não existir
         var targetBank = currentBanks.find { it.presetKey == presetKey }
         if (targetBank == null) {
             targetBank = BankEntity(
@@ -154,15 +160,6 @@ class BankNotificationService : NotificationListenerService() {
                 presetKey = preset.key
             )
             currentBanks.add(targetBank)
-        }
-
-        // Evita duplicação exata (mesma descrição e mesmo valor nos últimos 5 itens cadastrados)
-        val isDuplicate = targetBank.items.takeLast(5).any { 
-            it.description == description && it.monthlyAmount == amount 
-        }
-        if (isDuplicate) {
-            Log.d("BankNotification", "Despesa $description já foi cadastrada recentemente. Ignorando.")
-            return
         }
 
         val newItem = BillItem(
@@ -184,6 +181,11 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         repository.saveData(currentBanks)
-        Log.d("BankNotification", "Despesa $description de R$$amount salva com SUCESSO no banco ${preset.name}")
+        showDiagnosticToast("✅ SUCESSO! R$$amount salvo no ${preset.name}!")
+        Logd("BankNotification", "Despesa $description de R$$amount salva com SUCESSO no banco ${preset.name}")
+    }
+
+    private fun Logd(tag: String, msg: String) {
+        Log.d(tag, msg)
     }
 }
