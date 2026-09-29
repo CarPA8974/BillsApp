@@ -98,8 +98,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int) {
+        val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         val newBank = BankEntity(
-            name = name,
+            name = capName,
             colorHex = hexColor,
             presetKey = presetKey,
             defaultDueDay = defaultDueDay
@@ -108,9 +109,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int) {
+        val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
-                bank.copy(name = name, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay)
+                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay)
             } else bank
         })
     }
