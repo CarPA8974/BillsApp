@@ -189,6 +189,8 @@ class BankNotificationService : NotificationListenerService() {
             return
         }
 
+        val autoCategory = BillCategory.inferFromText(capDesc)
+
         val newItem = BillItem(
             description = capDesc,
             monthlyAmount = amount,
@@ -196,7 +198,7 @@ class BankNotificationService : NotificationListenerService() {
             totalInstallments = 1,
             currentInstallment = 1,
             dueDay = targetBank.defaultDueDay,
-            category = BillCategory.OUTROS,
+            category = autoCategory,
             isPaid = false,
             notes = "Adicionado via notificação",
             month = activeMonth,

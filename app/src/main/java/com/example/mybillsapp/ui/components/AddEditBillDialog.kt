@@ -80,7 +80,16 @@ fun AddEditBillDialog(
                 // Description
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it; errorMessage = null },
+                    onValueChange = { 
+                        description = it
+                        errorMessage = null
+                        if (!isEditing && it.length >= 2) {
+                            val inferred = BillCategory.inferFromText(it)
+                            if (inferred != BillCategory.OUTROS) {
+                                selectedCategory = inferred
+                            }
+                        }
+                    },
                     label = { Text("Descrição (ex: Supermercado, TV 55\")") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
