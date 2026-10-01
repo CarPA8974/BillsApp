@@ -15,10 +15,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,7 +41,8 @@ fun BankCard(
     onEditBill: (BillItem) -> Unit,
     onRemoveBill: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(true) }
+    // Preserva o estado de expandido/recolhido durante a rolagem (scroll)
+    var expanded by rememberSaveable { mutableStateOf(true) }
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "rotation")
     val bankColor = bank.getColor()
     
@@ -85,7 +88,7 @@ fun BankCard(
                     // Credit Limit Progress & Info
                     if (bank.creditLimit > 0.0) {
                         val available = bank.availableLimit
-                        val usedPercent = ((bank.creditLimit - available) / bank.creditLimit).toFloat().coerceIn(0f, 1f)
+                        val availablePercent = (available / bank.creditLimit).toFloat().coerceIn(0f, 1f)
                         
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
@@ -108,12 +111,12 @@ fun BankCard(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         LinearProgressIndicator(
-                            progress = { usedPercent },
+                            progress = { availablePercent },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(4.dp)
                                 .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFF00E676), // Verde representando o limite livre restante
                             trackColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
                         )
                     }

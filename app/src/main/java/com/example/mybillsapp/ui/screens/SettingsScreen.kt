@@ -237,7 +237,7 @@ fun SettingsScreen(
                     Text("Contas a Pagar - App de Gestão Financeira", fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Versão 2.1 • Desenvolvido para facilitar o controle visual das suas contas bancárias, cartões e despesas parceladas.",
+                        "Versão 2.4.0 • Desenvolvido para facilitar o controle visual das suas contas bancárias, cartões e despesas parceladas.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

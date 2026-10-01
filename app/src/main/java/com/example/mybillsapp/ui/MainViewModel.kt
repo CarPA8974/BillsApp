@@ -18,7 +18,7 @@ enum class NavTab(val label: String) {
     HOME("Início"),
     FUTURE("Futuro"),
     ANALYTICS("Análises"),
-    SETTINGS("Configurações")
+    SETTINGS("Ajustes")
 }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {

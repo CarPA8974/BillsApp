@@ -172,10 +172,10 @@ fun AppMainContent(viewModel: MainViewModel = viewModel()) {
                     icon = {
                         Icon(
                             imageVector = if (currentTab == NavTab.SETTINGS) Icons.Default.Settings else Icons.Outlined.Settings,
-                            contentDescription = "Configurações"
+                            contentDescription = "Ajustes"
                         )
                     },
-                    label = { Text("Configurações") }
+                    label = { Text("Ajustes") }
                 )
             }
         },

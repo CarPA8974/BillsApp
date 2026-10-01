@@ -206,7 +206,7 @@ fun StatsHeaderCard(
                 ) {
                     Column {
                         Text(
-                            text = "Limite Livre Consolidado",
+                            text = "Limite Total Disponível",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
