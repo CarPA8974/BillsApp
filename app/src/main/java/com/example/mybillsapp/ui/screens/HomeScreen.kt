@@ -51,6 +51,10 @@ fun HomeScreen(
     val totalPaidAmount = banks.sumOf { it.subtotalMonthPaid(currentMonthYear.month, currentMonthYear.year) }
     val totalPendingAmount = banks.sumOf { it.subtotalMonthPending(currentMonthYear.month, currentMonthYear.year) }
 
+    val activeBanks = banks.filter { !it.isArchived }
+    val totalCreditLimit = activeBanks.sumOf { it.creditLimit }
+    val totalAvailableLimit = activeBanks.sumOf { it.availableLimit }
+
     val isCurrentMonth = currentMonthYear == MonthYear.current()
 
     val overdueCount = if (isCurrentMonth) allItemsForMonth.count { it.isOverdue() } else 0
@@ -146,6 +150,8 @@ fun HomeScreen(
                     paidAmount = totalPaidAmount,
                     pendingAmount = totalPendingAmount,
                     overdueCount = overdueCount,
+                    totalCreditLimit = totalCreditLimit,
+                    totalAvailableLimit = totalAvailableLimit,
                     isPrivacy = isPrivacy
                 )
             }

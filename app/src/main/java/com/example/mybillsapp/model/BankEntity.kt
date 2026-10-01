@@ -24,9 +24,7 @@ data class BankEntity(
     val isArchived: Boolean = false,
     val creditLimit: Double = 0.0 // Limite estático de crédito
 ) {
-    // Retorna as faturas do mês específico.
-    // PROJEÇÃO AUTOMÁTICA DE PARCELAS: Se for um parcelamento (ex: 12x), o app calcula e exibe automaticamente
-    // a parcela correspondente no mês seguinte sem precisar de duplicações manuais!
+    // Retorna as faturas do mês específico com projeção dinâmica de parcelados
     fun itemsForMonth(targetMonth: Int, targetYear: Int): List<BillItem> {
         return items.mapNotNull { item ->
             if (item.month == targetMonth && item.year == targetYear) {
@@ -55,12 +53,16 @@ data class BankEntity(
     val subtotalCurrentMonthPaid: Double get() = items.filter { it.isPaid }.sumOf { it.monthlyAmount }
     val subtotalFutureDebt: Double get() = items.sumOf { it.remainingDebt }
 
-    // Limite disponível variável (Limite Total minus dívidas acumuladas)
-    fun getAvailableLimit(month: Int, year: Int): Double {
-        if (creditLimit <= 0.0) return 0.0
-        val committedDebt = subtotalMonthPending(month, year) + subtotalFutureDebt
-        return (creditLimit - committedDebt).coerceAtLeast(0.0)
-    }
+    // Soma de todos os débitos não pagos neste banco (independentemente do mês)
+    val totalUnpaidAmount: Double get() = items.filter { !it.isPaid }.sumOf { it.monthlyAmount }
+
+    // Limite disponível variável e absoluto (Limite Total minus todas as pendências + parcelas futuras)
+    val availableLimit: Double
+        get() {
+            if (creditLimit <= 0.0) return 0.0
+            val totalCommitted = totalUnpaidAmount + subtotalFutureDebt
+            return (creditLimit - totalCommitted).coerceAtLeast(0.0)
+        }
 
     fun getColor(): Color {
         return try {

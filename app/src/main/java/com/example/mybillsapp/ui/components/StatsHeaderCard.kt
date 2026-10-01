@@ -27,7 +27,9 @@ fun StatsHeaderCard(
     pendingAmount: Double,
     overdueCount: Int,
     isPrivacy: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    totalCreditLimit: Double = 0.0,
+    totalAvailableLimit: Double = 0.0
 ) {
     val progress = if (totalAmount > 0) (paidAmount / totalAmount).toFloat().coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(
@@ -185,6 +187,48 @@ fun StatsHeaderCard(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            // Consolidated Credit Limits (if configured)
+            if (totalCreditLimit > 0.0) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Limite Livre Consolidado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (isPrivacy) "R$ ****" else totalAvailableLimit.toCurrency(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF00E676)
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Limite Total (Todos Cartões)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = if (isPrivacy) "R$ ****" else totalCreditLimit.toCurrency(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

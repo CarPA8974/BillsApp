@@ -84,7 +84,7 @@ fun BankCard(
 
                     // Credit Limit Progress & Info
                     if (bank.creditLimit > 0.0) {
-                        val available = bank.getAvailableLimit(0, 0) // available limit calculation
+                        val available = bank.availableLimit
                         val usedPercent = ((bank.creditLimit - available) / bank.creditLimit).toFloat().coerceIn(0f, 1f)
                         
                         Spacer(modifier = Modifier.height(4.dp))
