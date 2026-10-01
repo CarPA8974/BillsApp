@@ -22,7 +22,7 @@ import com.example.mybillsapp.model.BankPresets
 fun AddEditBankDialog(
     initialBank: BankEntity? = null,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, hexColor: String, presetKey: String, defaultDueDay: Int) -> Unit
+    onConfirm: (name: String, hexColor: String, presetKey: String, defaultDueDay: Int, creditLimit: Double) -> Unit
 ) {
     val isEditing = initialBank != null
 
@@ -30,6 +30,7 @@ fun AddEditBankDialog(
     var selectedPresetKey by remember { mutableStateOf(initialBank?.presetKey ?: "OUTRO") }
     var selectedHexColor by remember { mutableStateOf(initialBank?.colorHex ?: "#7C4DFF") }
     var defaultDueDayStr by remember { mutableStateOf(initialBank?.defaultDueDay?.toString() ?: "10") }
+    var creditLimitStr by remember { mutableStateOf(initialBank?.creditLimit?.let { if (it > 0) it.toString() else "" } ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -93,8 +94,18 @@ fun AddEditBankDialog(
                 OutlinedTextField(
                     value = defaultDueDayStr,
                     onValueChange = { if (it.all { char -> char.isDigit() }) defaultDueDayStr = it },
-                    label = { Text("Dia de Vencimento Padrão") },
+                    label = { Text("Dia de Vencimento Padrão (1 a 31)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Credit Limit Input
+                OutlinedTextField(
+                    value = creditLimitStr,
+                    onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) creditLimitStr = it.replace(',', '.') },
+                    label = { Text("Limite Total de Crédito (R$ - opcional)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -105,7 +116,8 @@ fun AddEditBankDialog(
                 onClick = {
                     if (name.isNotBlank()) {
                         val parsedDay = defaultDueDayStr.toIntOrNull()?.coerceIn(1, 31) ?: 10
-                        onConfirm(name.trim(), selectedHexColor, selectedPresetKey, parsedDay)
+                        val parsedLimit = creditLimitStr.toDoubleOrNull() ?: 0.0
+                        onConfirm(name.trim(), selectedHexColor, selectedPresetKey, parsedDay, parsedLimit)
                     }
                 },
                 shape = RoundedCornerShape(12.dp)

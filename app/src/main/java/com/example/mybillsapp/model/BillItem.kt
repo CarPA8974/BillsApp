@@ -1,6 +1,9 @@
 package com.example.mybillsapp.model
 
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 data class BillItem(
@@ -15,7 +18,8 @@ data class BillItem(
     val category: BillCategory = BillCategory.OUTROS,
     val notes: String = "",
     val month: Int = Calendar.getInstance().get(Calendar.MONTH), // 0..11
-    val year: Int = Calendar.getInstance().get(Calendar.YEAR)
+    val year: Int = Calendar.getInstance().get(Calendar.YEAR),
+    val timestamp: Long = System.currentTimeMillis() // Data e hora da compra
 ) {
     // Quantia pendente para parcelas futuras (excluindo a atual)
     val remainingDebt: Double
@@ -46,5 +50,10 @@ data class BillItem(
         return today.get(Calendar.YEAR) == year && 
                today.get(Calendar.MONTH) == month && 
                today.get(Calendar.DAY_OF_MONTH) == dueDay
+    }
+
+    fun getFormattedDateTime(): String {
+        val sdf = SimpleDateFormat("dd/MM 'às' HH:mm", Locale.forLanguageTag("pt-BR"))
+        return sdf.format(Date(timestamp))
     }
 }

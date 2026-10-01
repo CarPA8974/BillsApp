@@ -50,24 +50,28 @@ class BillsRepository(context: Context) {
 
                     val safeDefaultDueDay = if (bank.defaultDueDay in 1..31) bank.defaultDueDay else 10
                     val safeIsArchived = bank.isArchived
+                    val safeLimit = if (bank.creditLimit >= 0.0) bank.creditLimit else 0.0
 
                     bank.copy(
                         colorHex = safeHex,
                         defaultDueDay = safeDefaultDueDay,
                         isArchived = safeIsArchived,
+                        creditLimit = safeLimit,
                         items = bank.items.map { item ->
                             val safeCategory = item.category
                             val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10
                             val safeTotalAmount = if (item.totalAmount > 0.0) item.totalAmount else item.monthlyAmount * item.totalInstallments
                             val safeYear = if (item.year > 2000) item.year else defaultYear
                             val safeMonth = if (item.month in 0..11) item.month else defaultMonth
+                            val safeTimestamp = if (item.timestamp > 0) item.timestamp else System.currentTimeMillis()
 
                             item.copy(
                                 category = safeCategory,
                                 dueDay = safeDueDay,
                                 totalAmount = safeTotalAmount,
                                 month = safeMonth,
-                                year = safeYear
+                                year = safeYear,
+                                timestamp = safeTimestamp
                             )
                         }
                     )
@@ -83,7 +87,6 @@ class BillsRepository(context: Context) {
         synchronized(fileLock) {
             try {
                 val jsonText = gson.toJson(list)
-                // Usando SharedPreferences para garantir I/O 100% Atômico e Seguro (evita corrupção de arquivo TXT)
                 prefs.edit().putString(dataKey, jsonText).apply()
                 Log.d("BillsRepository", "Dados salvos atomicamente com sucesso (${list.size} bancos).")
             } catch (e: Exception) {

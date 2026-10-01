@@ -213,8 +213,8 @@ fun HomeScreen(
     if (showAddBankDialog) {
         AddEditBankDialog(
             onDismiss = { showAddBankDialog = false },
-            onConfirm = { name, hexColor, presetKey, defaultDueDay ->
-                viewModel.addBank(name, hexColor, presetKey, defaultDueDay)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay, creditLimit ->
+                viewModel.addBank(name, hexColor, presetKey, defaultDueDay, creditLimit)
                 showAddBankDialog = false
             }
         )
@@ -225,8 +225,8 @@ fun HomeScreen(
         AddEditBankDialog(
             initialBank = bank,
             onDismiss = { editingBank = null },
-            onConfirm = { name, hexColor, presetKey, defaultDueDay ->
-                viewModel.editBank(bank.id, name, hexColor, presetKey, defaultDueDay)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay, creditLimit ->
+                viewModel.editBank(bank.id, name, hexColor, presetKey, defaultDueDay, creditLimit)
                 editingBank = null
             }
         )

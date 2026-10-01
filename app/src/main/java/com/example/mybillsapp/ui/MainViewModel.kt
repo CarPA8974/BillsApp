@@ -97,22 +97,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveActiveMonth(prev)
     }
 
-    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int) {
+    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int, creditLimit: Double = 0.0) {
         val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         val newBank = BankEntity(
             name = capName,
             colorHex = hexColor,
             presetKey = presetKey,
-            defaultDueDay = defaultDueDay
+            defaultDueDay = defaultDueDay,
+            creditLimit = creditLimit
         )
         updateData(_banks.value + newBank)
     }
 
-    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int) {
+    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int, creditLimit: Double = 0.0) {
         val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
-                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay)
+                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay, creditLimit = creditLimit)
             } else bank
         })
     }

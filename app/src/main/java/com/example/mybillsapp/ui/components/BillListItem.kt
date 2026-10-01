@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mybillsapp.model.BillItem
 import com.example.mybillsapp.toCurrency
-import java.util.Calendar
 
 @Composable
 fun BillListItem(
@@ -156,6 +155,15 @@ fun BillListItem(
                         }
                     }
                 }
+
+                // Date & Time Stamp
+                Text(
+                    text = item.getFormattedDateTime(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
 
                 if (item.notes.isNotBlank()) {
                     Text(

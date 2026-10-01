@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BillItem
 import com.example.mybillsapp.toCurrency
@@ -42,7 +43,6 @@ fun BankCard(
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "rotation")
     val bankColor = bank.getColor()
     
-    // O valor do banco agora vai DIMINUINDO conforme for pago ("value disappears" effect)
     val valueToShow = if (showFuture) bank.subtotalFutureDebt else bank.subtotalCurrentMonthPending
 
     Card(
@@ -81,6 +81,42 @@ fun BankCard(
                         fontWeight = FontWeight.SemiBold,
                         color = if (showFuture) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                     )
+
+                    // Credit Limit Progress & Info
+                    if (bank.creditLimit > 0.0) {
+                        val available = bank.getAvailableLimit(0, 0) // available limit calculation
+                        val usedPercent = ((bank.creditLimit - available) / bank.creditLimit).toFloat().coerceIn(0f, 1f)
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Limite Livre: ${if (isPrivacy) "****" else available.toCurrency()}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                text = "Total: ${if (isPrivacy) "****" else bank.creditLimit.toCurrency()}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        LinearProgressIndicator(
+                            progress = { usedPercent },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(CircleShape),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
+                        )
+                    }
                 }
 
                 if (!showFuture) {
