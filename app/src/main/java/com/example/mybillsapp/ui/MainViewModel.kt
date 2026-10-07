@@ -142,20 +142,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
-                val newItem = BillItem(
-                    description = capDesc,
-                    monthlyAmount = monthlyAmount,
-                    totalAmount = totalAmount,
-                    totalInstallments = installments,
-                    currentInstallment = currentInstallment,
-                    dueDay = dueDay,
-                    category = category,
-                    notes = notes,
-                    isPaid = false,
-                    month = activeMonth.month,
-                    year = activeMonth.year
-                )
-                bank.copy(items = bank.items + newItem)
+                val newItems = mutableListOf<BillItem>()
+                for (i in 0 until installments) {
+                    var targetMonth = activeMonth.month + i
+                    var targetYear = activeMonth.year
+                    while (targetMonth > 11) {
+                        targetMonth -= 12
+                        targetYear += 1
+                    }
+                    newItems.add(
+                        BillItem(
+                            id = UUID.randomUUID().toString(),
+                            description = capDesc,
+                            monthlyAmount = monthlyAmount,
+                            totalAmount = totalAmount,
+                            totalInstallments = installments,
+                            currentInstallment = currentInstallment + i,
+                            dueDay = dueDay,
+                            category = category,
+                            notes = notes,
+                            isPaid = false,
+                            month = targetMonth,
+                            year = targetYear
+                        )
+                    )
+                }
+                bank.copy(items = bank.items + newItems)
             } else bank
         })
     }
@@ -248,6 +260,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateData(updatedBanks)
         _currentMonthYear.value = nextMonth
         saveActiveMonth(nextMonth)
+    }
+
+    fun payAllMonthBills(bankId: String) {
+        val activeMonth = _currentMonthYear.value
+        updateData(_banks.value.map { bank ->
+            if (bank.id == bankId) {
+                bank.copy(items = bank.items.map { item ->
+                    if (item.month == activeMonth.month && item.year == activeMonth.year && !item.isPaid) {
+                        item.copy(isPaid = true)
+                    } else item
+                })
+            } else bank
+        })
     }
 
     fun reloadData() {

@@ -77,7 +77,8 @@ class BankNotificationService : NotificationListenerService() {
             "dinheiro guardado", "rendimento", "promoção", "fatura fechada", "depositado",
             "pagamento recebido", "transferiu para você", "chegou um pix", "cashback",
             "estorno", "reembolso", "devolvido", "falhou", "negada", "cancelada", "recusada",
-            "não aprovada", "bloqueada", "código", "erro", "saldo", "limite"
+            "não aprovada", "bloqueada", "código", "erro", "saldo", "limite",
+            "fatura paga", "pagamento da fatura", "pagamento de fatura", "pagamento do cartão", "fatura recebido"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
             Log.d("BankNotification", "Notificação ignorada: Pix, transferência ou palavra bloqueada detectada.")
@@ -92,7 +93,7 @@ class BankNotificationService : NotificationListenerService() {
 
         // 3. PALAVRAS-CHAVE RESTRITAS EXCLUSIVAMENTE A COMPRAS E PAGAMENTOS DE FATURA/BOLETO
         val validKeywords = listOf(
-            "compra", "aprovada", "aprovado", "pagamento", "pago", "boleto", "fatura"
+            "compra", "aprovada", "aprovado", "pagamento", "pago", "boleto", "fatura", "débito", "gasto", "cartão", "efetuado", "realizado"
         )
         if (validKeywords.none { content.contains(it) }) {
             Log.d("BankNotification", "Notificação ignorada: Não é uma compra ou pagamento de fatura/boleto.")
@@ -129,29 +130,44 @@ class BankNotificationService : NotificationListenerService() {
 
     private fun extrairDescricao(title: String, text: String): String {
         val fullContent = "$title $text"
-        val compraRegex = Regex("""(?:em|no|na|para)\s+([A-Za-z0-9\s*.\-&]+?)(?=\s+para|\s+no valor|\s*$)""", RegexOption.IGNORE_CASE)
+        
+        // Mapeia casos do C6 Bank que tem "valor de R$ X em Y"
+        val c6Regex = Regex("""valor de R\$\s*[\d\.,]+\s+(?:em|no|na)\s+([A-Za-z0-9\s*.\-&]+)""", RegexOption.IGNORE_CASE)
+        val matchC6 = c6Regex.find(fullContent)
+        
+        val compraRegex = Regex("""(?:em|no|na|para)\s+([A-Za-z0-9\s*.\-&]+?)(?=\s+para|\s+no valor|\s+valor|\s*$)""", RegexOption.IGNORE_CASE)
         val match = compraRegex.find(fullContent)
         
-        if (match != null && match.groupValues[1].isNotBlank()) {
-            var extracted = match.groupValues[1].trim()
-            val cleanRegex = Regex("""(?i)^(o cartão|o crédito|crédito|débito|valor de|r\$).*""")
+        var extracted = ""
+        if (matchC6 != null && matchC6.groupValues[1].isNotBlank()) {
+            extracted = matchC6.groupValues[1].trim()
+        } else if (match != null && match.groupValues[1].isNotBlank()) {
+            extracted = match.groupValues[1].trim()
+        }
+
+        if (extracted.isNotBlank()) {
+            val cleanRegex = Regex("""(?i)^(o cartão|o crédito|crédito|débito|valor de|r\$|sua fatura).*""")
             if (cleanRegex.matches(extracted)) {
-                 return fallbackDescricao(title)
+                 return fallbackDescricao(title, text)
             }
             
             val breakPoint = extracted.indexOf(" para o cartão")
-            if (breakPoint > 0) {
-                extracted = extracted.substring(0, breakPoint).trim()
-            }
+            if (breakPoint > 0) extracted = extracted.substring(0, breakPoint).trim()
+            val breakPoint2 = extracted.indexOf(" no valor")
+            if (breakPoint2 > 0) extracted = extracted.substring(0, breakPoint2).trim()
 
             return extracted
         }
         
-        return fallbackDescricao(title)
+        return fallbackDescricao(title, text)
     }
 
-    private fun fallbackDescricao(title: String): String {
+    private fun fallbackDescricao(title: String, text: String): String {
         val cleanTitle = title.replace(Regex("""(?i)compra (no crédito|no débito)?\s?aprovada\s?:?"""), "").trim()
+        if (cleanTitle.isBlank() || cleanTitle.lowercase() == "nubank" || cleanTitle.lowercase() == "c6 bank") {
+            val splitText = text.split(Regex("""(?i)\bem\b"""))
+            if (splitText.size > 1) return splitText[1].trim()
+        }
         return cleanTitle.takeIf { it.isNotBlank() } ?: "Despesa Automática"
     }
 

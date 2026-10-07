@@ -24,24 +24,9 @@ data class BankEntity(
     val isArchived: Boolean = false,
     val creditLimit: Double = 0.0 // Limite estático de crédito
 ) {
-    // Retorna as faturas do mês específico com projeção dinâmica de parcelados
+    // Retorna as faturas do mês específico sem projeção dinâmica (agora as parcelas são objetos reais no banco)
     fun itemsForMonth(targetMonth: Int, targetYear: Int): List<BillItem> {
-        return items.mapNotNull { item ->
-            if (item.month == targetMonth && item.year == targetYear) {
-                item
-            } else if (item.totalInstallments > 1) {
-                val monthsDiff = (targetYear - item.year) * 12 + (targetMonth - item.month)
-                val projectedInstallment = item.currentInstallment + monthsDiff
-                if (projectedInstallment in 1..item.totalInstallments) {
-                    item.copy(
-                        currentInstallment = projectedInstallment,
-                        month = targetMonth,
-                        year = targetYear,
-                        isPaid = if (monthsDiff > 0) false else item.isPaid
-                    )
-                } else null
-            } else null
-        }
+        return items.filter { it.month == targetMonth && it.year == targetYear }
     }
 
     fun subtotalMonth(month: Int, year: Int): Double = itemsForMonth(month, year).sumOf { it.monthlyAmount }

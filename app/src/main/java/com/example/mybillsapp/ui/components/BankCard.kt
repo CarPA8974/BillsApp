@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -39,7 +40,8 @@ fun BankCard(
     onRemoveBank: () -> Unit,
     onToggleBill: (String) -> Unit,
     onEditBill: (BillItem) -> Unit,
-    onRemoveBill: (String) -> Unit
+    onRemoveBill: (String) -> Unit,
+    onPayAllBills: () -> Unit = {}
 ) {
     // Preserva o estado de expandido/recolhido durante a rolagem (scroll)
     var expanded by rememberSaveable { mutableStateOf(true) }
@@ -184,18 +186,35 @@ fun BankCard(
                     }
 
                     if (!showFuture) {
-                        OutlinedButton(
-                            onClick = onAddBill,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Adicionar Despesa", fontWeight = FontWeight.Bold)
+                            OutlinedButton(
+                                onClick = onAddBill,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Despesa", fontWeight = FontWeight.Bold)
+                            }
+                            
+                            val hasPending = bank.items.any { !it.isPaid }
+                            if (hasPending) {
+                                Button(
+                                    onClick = onPayAllBills,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676), contentColor = Color.Black)
+                                ) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Pagar Tudo", fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }

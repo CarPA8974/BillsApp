@@ -206,7 +206,8 @@ fun HomeScreen(
                         onRemoveBank = { bankToDelete = bank },
                         onToggleBill = { billId -> viewModel.toggleBillStatus(bank.id, billId) },
                         onEditBill = { item -> editingBillPair = Pair(bank.id, item) },
-                        onRemoveBill = { billId -> billToDeletePair = Pair(bank.id, billId) }
+                        onRemoveBill = { billId -> billToDeletePair = Pair(bank.id, billId) },
+                        onPayAllBills = { viewModel.payAllMonthBills(bank.id) }
                     )
                 }
             }
