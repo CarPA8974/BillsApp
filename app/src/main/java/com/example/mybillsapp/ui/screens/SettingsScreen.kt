@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.service.BankNotificationService
 import com.example.mybillsapp.ui.MainViewModel
 import com.example.mybillsapp.ui.components.HelpWelcomeDialog
+import com.example.mybillsapp.util.Logger
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +40,8 @@ fun SettingsScreen(
 
     var showClearConfirmDialog by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
+    var showLogDialog by remember { mutableStateOf(false) }
+    val logText = remember(showLogDialog) { Logger.getLogContent(context) }
 
     LazyColumn(
         modifier = modifier
@@ -226,7 +229,7 @@ fun SettingsScreen(
             }
         }
 
-        // App Info
+        // App Info & Logs
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -234,16 +237,76 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Contas a Pagar - App de Gestão Financeira", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Versão 2.4.0 • Desenvolvido para facilitar o controle visual das suas contas bancárias, cartões e despesas parceladas.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Contas a Pagar - App de Gestão", fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Versão 2.6.0 • Controle financeiro inteligente.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { showLogDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.BugReport,
+                                contentDescription = "Logs de Diagnóstico",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+
+    // Diagnostic Logs Dialog
+    if (showLogDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogDialog = false },
+            title = { Text("Logs de Detecção (Dev)", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Estes registros mostram exatamente como o robô enxergou as notificações que chegaram no seu celular recentemente:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = logText,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                        textStyle = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("MyBillsLogs", logText)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Logs copiados!", Toast.LENGTH_SHORT).show()
+                    },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Copiar p/ Enviar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogDialog = false }) {
+                    Text("Fechar")
+                }
+            }
+        )
     }
 
     // Help Dialog

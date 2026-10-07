@@ -11,6 +11,7 @@ import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
 import com.example.mybillsapp.model.BillCategory
 import com.example.mybillsapp.model.BillItem
+import com.example.mybillsapp.util.Logger
 import java.util.Calendar
 
 class BankNotificationService : NotificationListenerService() {
@@ -81,13 +82,13 @@ class BankNotificationService : NotificationListenerService() {
             "fatura paga", "pagamento da fatura", "pagamento de fatura", "pagamento do cartão", "fatura recebido"
         )
         if (ignoreKeywords.any { content.contains(it) }) {
-            Log.d("BankNotification", "Notificação ignorada: Pix, transferência ou palavra bloqueada detectada.")
+            Logger.d(applicationContext, "Ignorada ($presetKey): '$rawContent' -> Motivo: Contém palavra bloqueada.")
             return
         }
 
         // 2. GARANTIR QUE TEM O SÍMBOLO R$
         if (!content.contains("r$")) {
-            Log.d("BankNotification", "Notificação ignorada: Sem R$.")
+            Logger.d(applicationContext, "Ignorada ($presetKey): '$rawContent' -> Motivo: Sem R$.")
             return
         }
 
@@ -96,7 +97,7 @@ class BankNotificationService : NotificationListenerService() {
             "compra", "aprovada", "aprovado", "pagamento", "pago", "boleto", "fatura", "débito", "gasto", "cartão", "efetuado", "realizado"
         )
         if (validKeywords.none { content.contains(it) }) {
-            Log.d("BankNotification", "Notificação ignorada: Não é uma compra ou pagamento de fatura/boleto.")
+            Logger.d(applicationContext, "Ignorada ($presetKey): '$rawContent' -> Motivo: Sem palavra de débito (compra, aprovada, etc).")
             return
         }
 
@@ -109,10 +110,14 @@ class BankNotificationService : NotificationListenerService() {
             val valueStr = rawValue.replace(".", "").replace(",", ".")
             val amount = valueStr.toDoubleOrNull()
             
-            if (amount == null || amount <= 0.0) return
+            if (amount == null || amount <= 0.0) {
+                Logger.d(applicationContext, "Ignorada ($presetKey): '$rawContent' -> Motivo: Valor matemático extraído (R$ $amount) é inválido.")
+                return
+            }
 
             // 5. EXTRAÇÃO DA DESCRIÇÃO DO ESTABELECIMENTO
             val description = extrairDescricao(title, text.ifBlank { bigText })
+            Logger.d(applicationContext, "PROCESSANDO ($presetKey): Regex extraiu R$$amount em '$description' a partir de: $rawContent")
 
             saveBillAutomatically(presetKey, description, amount)
             
@@ -201,7 +206,7 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         if (isAlreadyRegistered) {
-            Log.d("BankNotification", "Despesa duplicada ignorada: $capDesc de R$$amount já existe em $activeMonth/$activeYear.")
+            Logger.d(applicationContext, "Duplicada Ignorada: O banco já possui um gasto de R$$amount em '$capDesc' no mês $activeMonth.")
             return
         }
 
@@ -228,6 +233,6 @@ class BankNotificationService : NotificationListenerService() {
         }
 
         repository.saveData(currentBanks)
-        Log.d("BankNotification", "Despesa $capDesc de R$$amount salva com SUCESSO no banco ${preset.name}")
+        Logger.d(applicationContext, "✅ SUCESSO: R$$amount salvo no ${preset.name} sob a categoria ${autoCategory.displayName}. Estabelecimento: '$capDesc'")
     }
 }
