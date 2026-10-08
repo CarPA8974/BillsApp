@@ -120,9 +120,10 @@ fun BillListItem(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Due Date Tag
                     if (!showFuture) {
@@ -191,9 +192,9 @@ fun BillListItem(
                 )
 
                 if (!showFuture) {
-                    Row(modifier = Modifier.padding(top = 2.dp)) {
+                    Row(modifier = Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                         if (onMoveToNextMonth != null && !item.isPaid) {
-                            IconButton(onClick = onMoveToNextMonth, modifier = Modifier.size(28.dp)) {
+                            IconButton(onClick = onMoveToNextMonth, modifier = Modifier.size(26.dp)) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = "Jogar para o mês seguinte",
@@ -202,7 +203,7 @@ fun BillListItem(
                                 )
                             }
                         }
-                        IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(26.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Editar",
@@ -210,7 +211,7 @@ fun BillListItem(
                                 modifier = Modifier.size(16.dp)
                             )
                         }
-                        IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                        IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Excluir",
