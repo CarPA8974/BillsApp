@@ -120,10 +120,10 @@ fun BillListItem(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                @OptIn(ExperimentalLayoutApi::class)
-                FlowRow(
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Due Date Tag
                     if (!showFuture) {
