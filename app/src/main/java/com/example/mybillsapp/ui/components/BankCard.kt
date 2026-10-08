@@ -41,6 +41,7 @@ fun BankCard(
     onToggleBill: (String) -> Unit,
     onEditBill: (BillItem) -> Unit,
     onRemoveBill: (String) -> Unit,
+    onMoveBillNextMonth: (String) -> Unit = {},
     onPayAllBills: () -> Unit = {}
 ) {
     // Preserva o estado de expandido/recolhido durante a rolagem (scroll)
@@ -99,16 +100,16 @@ fun BankCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Limite Livre: ${if (isPrivacy) "****" else available.toCurrency()}",
+                                text = "Livre: ${if (isPrivacy) "****" else available.toCurrency()}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.sp
                             )
                             Text(
-                                text = "Total: ${if (isPrivacy) "****" else bank.creditLimit.toCurrency()}",
+                                text = "Vence dia ${bank.defaultDueDay} | Fecha dia ${bank.closingDay}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
+                                fontSize = 10.sp
                             )
                         }
                         Spacer(modifier = Modifier.height(2.dp))
@@ -178,7 +179,8 @@ fun BankCard(
                                         showFuture = showFuture,
                                         onTogglePaid = { onToggleBill(item.id) },
                                         onEdit = { onEditBill(item) },
-                                        onDelete = { onRemoveBill(item.id) }
+                                        onDelete = { onRemoveBill(item.id) },
+                                        onMoveToNextMonth = { onMoveBillNextMonth(item.id) }
                                     )
                                 }
                             }

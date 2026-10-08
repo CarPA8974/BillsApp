@@ -21,6 +21,7 @@ data class BankEntity(
     val presetKey: String = "OUTRO",
     val colorIndex: Int = 0, // For backwards compatibility
     val defaultDueDay: Int = 10,
+    val closingDay: Int = 1, // Dia em que a fatura fecha (joga para o mês seguinte)
     val isArchived: Boolean = false,
     val creditLimit: Double = 0.0 // Limite estático de crédito
 ) {
@@ -36,7 +37,7 @@ data class BankEntity(
     val subtotalCurrentMonth: Double get() = items.sumOf { it.monthlyAmount }
     val subtotalCurrentMonthPending: Double get() = items.filter { !it.isPaid }.sumOf { it.monthlyAmount }
     val subtotalCurrentMonthPaid: Double get() = items.filter { it.isPaid }.sumOf { it.monthlyAmount }
-    val subtotalFutureDebt: Double get() = items.sumOf { it.remainingDebt }
+    val subtotalFutureDebt: Double get() = 0.0
 
     // Soma de todos os débitos não pagos neste banco (independentemente do mês)
     val totalUnpaidAmount: Double get() = items.filter { !it.isPaid }.sumOf { it.monthlyAmount }
@@ -45,7 +46,7 @@ data class BankEntity(
     val availableLimit: Double
         get() {
             if (creditLimit <= 0.0) return 0.0
-            val totalCommitted = totalUnpaidAmount + subtotalFutureDebt
+            val totalCommitted = totalUnpaidAmount
             return (creditLimit - totalCommitted).coerceAtLeast(0.0)
         }
 

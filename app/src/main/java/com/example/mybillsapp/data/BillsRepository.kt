@@ -49,12 +49,14 @@ class BillsRepository(context: Context) {
                     } else preset?.hexColor ?: BankPresets.presets[(bank.colorIndex.coerceAtLeast(0)) % BankPresets.presets.size].hexColor
 
                     val safeDefaultDueDay = if (bank.defaultDueDay in 1..31) bank.defaultDueDay else 10
+                    val safeClosingDay = if (bank.closingDay in 1..31) bank.closingDay else (safeDefaultDueDay - 7).let { if (it < 1) it + 30 else it }
                     val safeIsArchived = bank.isArchived
                     val safeLimit = if (bank.creditLimit >= 0.0) bank.creditLimit else 0.0
 
                     bank.copy(
                         colorHex = safeHex,
                         defaultDueDay = safeDefaultDueDay,
+                        closingDay = safeClosingDay,
                         isArchived = safeIsArchived,
                         creditLimit = safeLimit,
                         items = bank.items.map { item ->
@@ -64,8 +66,10 @@ class BillsRepository(context: Context) {
                             val safeYear = if (item.year > 2000) item.year else defaultYear
                             val safeMonth = if (item.month in 0..11) item.month else defaultMonth
                             val safeTimestamp = if (item.timestamp > 0) item.timestamp else System.currentTimeMillis()
+                            val safeGroupId = if (item.groupId.isNullOrBlank()) item.id else item.groupId
 
                             item.copy(
+                                groupId = safeGroupId,
                                 category = safeCategory,
                                 dueDay = safeDueDay,
                                 totalAmount = safeTotalAmount,

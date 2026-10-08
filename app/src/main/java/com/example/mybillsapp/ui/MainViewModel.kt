@@ -97,23 +97,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveActiveMonth(prev)
     }
 
-    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int, creditLimit: Double = 0.0) {
+    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double = 0.0) {
         val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         val newBank = BankEntity(
             name = capName,
             colorHex = hexColor,
             presetKey = presetKey,
             defaultDueDay = defaultDueDay,
+            closingDay = closingDay,
             creditLimit = creditLimit
         )
         updateData(_banks.value + newBank)
     }
 
-    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int, creditLimit: Double = 0.0) {
+    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double = 0.0) {
         val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
-                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay, creditLimit = creditLimit)
+                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay, closingDay = closingDay, creditLimit = creditLimit)
             } else bank
         })
     }
@@ -143,7 +144,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
                 val newItems = mutableListOf<BillItem>()
-                for (i in 0 until installments) {
+                val groupId = UUID.randomUUID().toString()
+                val remaining = (installments - currentInstallment + 1).coerceAtLeast(1)
+                
+                for (i in 0 until remaining) {
                     var targetMonth = activeMonth.month + i
                     var targetYear = activeMonth.year
                     while (targetMonth > 11) {
@@ -153,6 +157,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     newItems.add(
                         BillItem(
                             id = UUID.randomUUID().toString(),
+                            groupId = groupId,
                             description = capDesc,
                             monthlyAmount = monthlyAmount,
                             totalAmount = totalAmount,
@@ -200,6 +205,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             category = category,
                             notes = notes
                         )
+                    } else item
+                })
+            } else bank
+        })
+    }
+
+    fun moveBillToNextMonth(bankId: String, billId: String) {
+        updateData(_banks.value.map { bank ->
+            if (bank.id == bankId) {
+                bank.copy(items = bank.items.map { item ->
+                    if (item.id == billId) {
+                        var nextMonth = item.month + 1
+                        var nextYear = item.year
+                        if (nextMonth > 11) {
+                            nextMonth = 0
+                            nextYear++
+                        }
+                        item.copy(month = nextMonth, year = nextYear)
+                    } else item
+                })
+            } else bank
+        })
+    }
+
+    fun removeBillSeries(bankId: String, groupId: String) {
+        updateData(_banks.value.map { bank ->
+            if (bank.id == bankId) {
+                bank.copy(items = bank.items.filter { it.groupId != groupId })
+            } else bank
+        })
+    }
+
+    fun payBillSeries(bankId: String, groupId: String, startCurrentInstallment: Int) {
+        updateData(_banks.value.map { bank ->
+            if (bank.id == bankId) {
+                bank.copy(items = bank.items.map { item ->
+                    if (item.groupId == groupId && item.currentInstallment >= startCurrentInstallment) {
+                        item.copy(isPaid = true)
                     } else item
                 })
             } else bank

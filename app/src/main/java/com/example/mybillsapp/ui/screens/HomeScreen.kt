@@ -38,10 +38,14 @@ fun HomeScreen(
     var showAddBankDialog by remember { mutableStateOf(false) }
     var editingBank by remember { mutableStateOf<BankEntity?>(null) }
     var bankToDelete by remember { mutableStateOf<BankEntity?>(null) }
-
+    
+    // Add/Edit Bill State
     var selectedBankForAddBill by remember { mutableStateOf<String?>(null) }
-    var editingBillPair by remember { mutableStateOf<Pair<String, BillItem>?>(null) } // Pair(bankId, billItem)
-    var billToDeletePair by remember { mutableStateOf<Pair<String, String>?>(null) } // Pair(bankId, billId)
+    var editingBillPair by remember { mutableStateOf<Pair<String, BillItem>?>(null) }
+
+    // Bill Action States
+    var billToTogglePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) }
+    var billToDeletePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) } // Pair(bankId, billId)
 
     var showAdvanceCycleDialog by remember { mutableStateOf(false) }
 
@@ -203,10 +207,31 @@ fun HomeScreen(
                         showFuture = false,
                         onAddBill = { selectedBankForAddBill = bank.id },
                         onEditBank = { editingBank = bank },
-                        onRemoveBank = { bankToDelete = bank },
-                        onToggleBill = { billId -> viewModel.toggleBillStatus(bank.id, billId) },
+                        onRemoveBank = {
+                            if (bank.items.isEmpty()) {
+                                viewModel.removeBank(bank.id)
+                            } else {
+                                bankToDelete = bank
+                            }
+                        },
+                        onToggleBill = { billId ->
+                            val bill = bank.items.find { it.id == billId }
+                            if (bill != null && bill.totalInstallments > 1) {
+                                billToTogglePair = Pair(bank.id, bill)
+                            } else {
+                                viewModel.toggleBillStatus(bank.id, billId)
+                            }
+                        },
                         onEditBill = { item -> editingBillPair = Pair(bank.id, item) },
-                        onRemoveBill = { billId -> billToDeletePair = Pair(bank.id, billId) },
+                        onRemoveBill = { billId ->
+                            val bill = bank.items.find { it.id == billId }
+                            if (bill != null && bill.totalInstallments > 1) {
+                                billToDeletePair = Pair(bank.id, bill)
+                            } else {
+                                viewModel.removeBill(bank.id, billId)
+                            }
+                        },
+                        onMoveBillNextMonth = { billId -> viewModel.moveBillToNextMonth(bank.id, billId) },
                         onPayAllBills = { viewModel.payAllMonthBills(bank.id) }
                     )
                 }
@@ -220,8 +245,8 @@ fun HomeScreen(
     if (showAddBankDialog) {
         AddEditBankDialog(
             onDismiss = { showAddBankDialog = false },
-            onConfirm = { name, hexColor, presetKey, defaultDueDay, creditLimit ->
-                viewModel.addBank(name, hexColor, presetKey, defaultDueDay, creditLimit)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay, closingDay, creditLimit ->
+                viewModel.addBank(name, hexColor, presetKey, defaultDueDay, closingDay, creditLimit)
                 showAddBankDialog = false
             }
         )
@@ -232,8 +257,8 @@ fun HomeScreen(
         AddEditBankDialog(
             initialBank = bank,
             onDismiss = { editingBank = null },
-            onConfirm = { name, hexColor, presetKey, defaultDueDay, creditLimit ->
-                viewModel.editBank(bank.id, name, hexColor, presetKey, defaultDueDay, creditLimit)
+            onConfirm = { name, hexColor, presetKey, defaultDueDay, closingDay, creditLimit ->
+                viewModel.editBank(bank.id, name, hexColor, presetKey, defaultDueDay, closingDay, creditLimit)
                 editingBank = null
             }
         )
@@ -299,15 +324,47 @@ fun HomeScreen(
         )
     }
 
-    // Delete Bill
-    billToDeletePair?.let { (bankId, billId) ->
+    // Delete Bill Confirmation (Multi-installment handling)
+    billToDeletePair?.let { (bankId, billItem) ->
         ConfirmDeleteDialog(
             title = "Excluir Despesa",
-            message = "Tem certeza que deseja remover esta despesa?",
+            message = "Esta é uma despesa parcelada (${billItem.currentInstallment}/${billItem.totalInstallments}x). O que deseja excluir?",
+            confirmText = "Somente Esta",
+            dismissText = "Cancelar",
             onDismiss = { billToDeletePair = null },
             onConfirm = {
-                viewModel.removeBill(bankId, billId)
+                viewModel.removeBill(bankId, billItem.id)
                 billToDeletePair = null
+            },
+            extraButtonText = "Excluir Todas (Série)",
+            onExtraAction = {
+                viewModel.removeBillSeries(bankId, billItem.groupId)
+                billToDeletePair = null
+            }
+        )
+    }
+
+    // Toggle Paid Bill Confirmation (Multi-installment handling)
+    billToTogglePair?.let { (bankId, billItem) ->
+        val isPaying = !billItem.isPaid
+        ConfirmDeleteDialog(
+            title = if (isPaying) "Pagar Parcelas" else "Desmarcar Parcelas",
+            message = "Você está prestes a ${if (isPaying) "pagar" else "desmarcar"} uma conta parcelada. Deseja aplicar isso apenas a esta parcela ou a todas as seguintes?",
+            confirmText = "Somente Esta",
+            dismissText = "Cancelar",
+            onDismiss = { billToTogglePair = null },
+            onConfirm = {
+                viewModel.toggleBillStatus(bankId, billItem.id)
+                billToTogglePair = null
+            },
+            extraButtonText = "Aplicar a Todas Futuras",
+            onExtraAction = {
+                if (isPaying) {
+                    viewModel.payBillSeries(bankId, billItem.groupId, billItem.currentInstallment)
+                } else {
+                    viewModel.toggleBillStatus(bankId, billItem.id) // Simplificando para desmarcar só essa caso precise reverter
+                }
+                billToTogglePair = null
             }
         )
     }

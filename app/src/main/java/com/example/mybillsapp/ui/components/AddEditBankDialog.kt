@@ -22,7 +22,7 @@ import com.example.mybillsapp.model.BankPresets
 fun AddEditBankDialog(
     initialBank: BankEntity? = null,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, hexColor: String, presetKey: String, defaultDueDay: Int, creditLimit: Double) -> Unit
+    onConfirm: (name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double) -> Unit
 ) {
     val isEditing = initialBank != null
 
@@ -30,6 +30,7 @@ fun AddEditBankDialog(
     var selectedPresetKey by remember { mutableStateOf(initialBank?.presetKey ?: "OUTRO") }
     var selectedHexColor by remember { mutableStateOf(initialBank?.colorHex ?: "#7C4DFF") }
     var defaultDueDayStr by remember { mutableStateOf(initialBank?.defaultDueDay?.toString() ?: "10") }
+    var closingDayStr by remember { mutableStateOf(initialBank?.closingDay?.let { if (it > 0) it.toString() else "1" } ?: "1") }
     var creditLimitStr by remember { mutableStateOf(initialBank?.creditLimit?.let { if (it > 0) it.toString() else "" } ?: "") }
 
     AlertDialog(
@@ -90,15 +91,29 @@ fun AddEditBankDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Default Due Day Input
-                OutlinedTextField(
-                    value = defaultDueDayStr,
-                    onValueChange = { if (it.all { char -> char.isDigit() }) defaultDueDayStr = it },
-                    label = { Text("Dia de Vencimento Padrão (1 a 31)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Default Due Day & Closing Day Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = defaultDueDayStr,
+                        onValueChange = { if (it.all { char -> char.isDigit() }) defaultDueDayStr = it },
+                        label = { Text("Vencimento (1-31)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    OutlinedTextField(
+                        value = closingDayStr,
+                        onValueChange = { if (it.all { char -> char.isDigit() }) closingDayStr = it },
+                        label = { Text("Fechamento (1-31)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 // Credit Limit Input
                 OutlinedTextField(
@@ -115,9 +130,10 @@ fun AddEditBankDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        val parsedDay = defaultDueDayStr.toIntOrNull()?.coerceIn(1, 31) ?: 10
+                        val parsedDueDay = defaultDueDayStr.toIntOrNull()?.coerceIn(1, 31) ?: 10
+                        val parsedClosingDay = closingDayStr.toIntOrNull()?.coerceIn(1, 31) ?: 1
                         val parsedLimit = creditLimitStr.toDoubleOrNull() ?: 0.0
-                        onConfirm(name.trim(), selectedHexColor, selectedPresetKey, parsedDay, parsedLimit)
+                        onConfirm(name.trim(), selectedHexColor, selectedPresetKey, parsedDueDay, parsedClosingDay, parsedLimit)
                     }
                 },
                 shape = RoundedCornerShape(12.dp)

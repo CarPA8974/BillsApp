@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -29,7 +30,8 @@ fun BillListItem(
     showFuture: Boolean = false,
     onTogglePaid: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onMoveToNextMonth: (() -> Unit)? = null
 ) {
     val isOverdue = item.isOverdue() && !showFuture
     val isDueToday = item.isDueToday() && !showFuture
@@ -190,6 +192,16 @@ fun BillListItem(
 
                 if (!showFuture) {
                     Row(modifier = Modifier.padding(top = 2.dp)) {
+                        if (onMoveToNextMonth != null && !item.isPaid) {
+                            IconButton(onClick = onMoveToNextMonth, modifier = Modifier.size(28.dp)) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Jogar para o mês seguinte",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                         IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
