@@ -230,15 +230,7 @@ fun AppMainContent(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    if (showAddBankDialog) {
-        AddEditBankDialog(
-            onDismiss = { showAddBankDialog = false },
-            onConfirm = { name, hexColor, presetKey, defaultDueDay, closingDay, creditLimit ->
-                viewModel.addBank(name, hexColor, presetKey, defaultDueDay, closingDay, creditLimit)
-                showAddBankDialog = false
-            }
-        )
-    }
+
 
     if (showWelcomeDialog) {
         HelpWelcomeDialog(

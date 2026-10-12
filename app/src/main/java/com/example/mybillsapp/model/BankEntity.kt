@@ -38,24 +38,35 @@ data class BankEntity(
     val subtotalCurrentMonthPaid: Double get() = items.filter { it.isPaid }.sumOf { it.monthlyAmount }
     val subtotalFutureDebt: Double get() = 0.0
 
-    // Cálculo exato do total comprometido no cartão (considera compras legadas de parcela única e séries físicas)
+    // Cálculo ultra-preciso do total comprometido no cartão sem duplicação de dívida
     val totalCommittedDebt: Double
         get() {
-            val grouped = items.groupBy { if (it.groupId.isNotBlank()) it.groupId else it.id }
             var total = 0.0
-            for ((_, groupItems) in grouped) {
-                if (groupItems.size > 1) {
-                    total += groupItems.filter { !it.isPaid }.sumOf { it.monthlyAmount }
-                } else {
-                    val item = groupItems.first()
-                    if (!item.isPaid) {
-                        if (item.totalInstallments > 1 && item.totalAmount > item.monthlyAmount) {
+            val processedLegacyKeys = mutableSetOf<String>()
+
+            for (item in items) {
+                if (item.isPaid) continue
+
+                if (item.totalInstallments > 1) {
+                    val physicalCount = items.count { 
+                        it.description.equals(item.description, ignoreCase = true) && 
+                        it.totalInstallments == item.totalInstallments 
+                    }
+
+                    if (physicalCount > 1) {
+                        // Parcelas físicas existem no banco -> soma apenas o valor desta parcela
+                        total += item.monthlyAmount
+                    } else {
+                        // Item único legado -> calcula o restante das parcelas uma única vez
+                        val legacyKey = "${item.description.lowercase()}_${item.totalInstallments}"
+                        if (!processedLegacyKeys.contains(legacyKey)) {
+                            processedLegacyKeys.add(legacyKey)
                             val remainingCount = (item.totalInstallments - item.currentInstallment + 1).coerceAtLeast(1)
                             total += item.monthlyAmount * remainingCount
-                        } else {
-                            total += item.monthlyAmount
                         }
                     }
+                } else {
+                    total += item.monthlyAmount
                 }
             }
             return total
