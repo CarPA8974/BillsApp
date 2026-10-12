@@ -22,9 +22,11 @@ data class BillItem(
     val year: Int = Calendar.getInstance().get(Calendar.YEAR),
     val timestamp: Long = System.currentTimeMillis() // Data e hora da compra
 ) {
-    // Quantia pendente para parcelas futuras. Retorna 0 se os itens forem físicos para não duplicar dívidas.
+    // Quantia pendente para parcelas futuras (excluindo a atual)
     val remainingDebt: Double
-        get() = 0.0
+        get() = if (totalInstallments > 1 && totalInstallments > currentInstallment) {
+            monthlyAmount * (totalInstallments - currentInstallment)
+        } else 0.0
 
     val remainingInstallmentsCount: Int
         get() = if (totalInstallments > 1) (totalInstallments - currentInstallment).coerceAtLeast(0) else 0

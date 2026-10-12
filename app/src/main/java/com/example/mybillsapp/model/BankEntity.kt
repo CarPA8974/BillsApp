@@ -25,7 +25,6 @@ data class BankEntity(
     val isArchived: Boolean = false,
     val creditLimit: Double = 0.0 // Limite estático de crédito
 ) {
-    // Retorna as faturas do mês específico sem projeção dinâmica (agora as parcelas são objetos reais no banco)
     fun itemsForMonth(targetMonth: Int, targetYear: Int): List<BillItem> {
         return items.filter { it.month == targetMonth && it.year == targetYear }
     }
@@ -39,15 +38,33 @@ data class BankEntity(
     val subtotalCurrentMonthPaid: Double get() = items.filter { it.isPaid }.sumOf { it.monthlyAmount }
     val subtotalFutureDebt: Double get() = 0.0
 
-    // Soma de todos os débitos não pagos neste banco (independentemente do mês)
-    val totalUnpaidAmount: Double get() = items.filter { !it.isPaid }.sumOf { it.monthlyAmount }
+    // Cálculo exato do total comprometido no cartão (considera compras legadas de parcela única e séries físicas)
+    val totalCommittedDebt: Double
+        get() {
+            val grouped = items.groupBy { if (it.groupId.isNotBlank()) it.groupId else it.id }
+            var total = 0.0
+            for ((_, groupItems) in grouped) {
+                if (groupItems.size > 1) {
+                    total += groupItems.filter { !it.isPaid }.sumOf { it.monthlyAmount }
+                } else {
+                    val item = groupItems.first()
+                    if (!item.isPaid) {
+                        if (item.totalInstallments > 1 && item.totalAmount > item.monthlyAmount) {
+                            val remainingCount = (item.totalInstallments - item.currentInstallment + 1).coerceAtLeast(1)
+                            total += item.monthlyAmount * remainingCount
+                        } else {
+                            total += item.monthlyAmount
+                        }
+                    }
+                }
+            }
+            return total
+        }
 
-    // Limite disponível variável e absoluto (Limite Total minus todas as pendências + parcelas futuras)
     val availableLimit: Double
         get() {
             if (creditLimit <= 0.0) return 0.0
-            val totalCommitted = totalUnpaidAmount
-            return (creditLimit - totalCommitted).coerceAtLeast(0.0)
+            return (creditLimit - totalCommittedDebt).coerceAtLeast(0.0)
         }
 
     fun getColor(): Color {

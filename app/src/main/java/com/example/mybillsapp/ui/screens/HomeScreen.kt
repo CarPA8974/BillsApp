@@ -87,8 +87,18 @@ fun HomeScreen(
                 matchesSearch && matchesStatus && matchesCategory
             }
 
-            // Only show archived banks IF they have bills in this specific month
-            val isVisible = if (bank.isArchived) filteredItems.isNotEmpty() else (filteredItems.isNotEmpty() || searchQuery.isBlank())
+            val hasActiveFilter = statusFilter != StatusFilter.ALL || categoryFilter != null || searchQuery.isNotBlank()
+
+            // Bancos ativos NUNCA somem sem filtro. Bancos arquivados só aparecem se tiverem despesas no mês.
+            val isVisible = if (bank.isArchived) {
+                filteredItems.isNotEmpty()
+            } else {
+                if (hasActiveFilter) {
+                    filteredItems.isNotEmpty()
+                } else {
+                    true
+                }
+            }
             
             if (isVisible) {
                 bank.copy(items = filteredItems)
