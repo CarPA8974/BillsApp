@@ -111,6 +111,7 @@ fun FutureScreen(
                 items(banksWithFutureDebt, key = { it.id }) { bank ->
                     BankCard(
                         bank = bank,
+                        displayedItems = bank.items.filter { it.remainingDebt > 0 },
                         isPrivacy = isPrivacy,
                         showFuture = true,
                         onAddBill = {},

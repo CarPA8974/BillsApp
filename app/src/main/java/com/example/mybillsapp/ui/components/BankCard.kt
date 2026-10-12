@@ -32,6 +32,7 @@ import com.example.mybillsapp.toCurrency
 @Composable
 fun BankCard(
     bank: BankEntity,
+    displayedItems: List<BillItem>,
     isPrivacy: Boolean,
     modifier: Modifier = Modifier,
     showFuture: Boolean = false,
@@ -161,7 +162,7 @@ fun BankCard(
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
-                    if (bank.items.isEmpty()) {
+                    if (displayedItems.isEmpty()) {
                         Text(
                             text = "Nenhuma despesa cadastrada neste banco.",
                             style = MaterialTheme.typography.bodySmall,
@@ -170,7 +171,7 @@ fun BankCard(
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            bank.items.forEach { item ->
+                            displayedItems.forEach { item ->
                                 val shouldShow = if (showFuture) item.remainingDebt > 0.0 else true
                                 if (shouldShow) {
                                     BillListItem(
@@ -204,7 +205,7 @@ fun BankCard(
                                 Text("Despesa", fontWeight = FontWeight.Bold)
                             }
                             
-                            val hasPending = bank.items.any { !it.isPaid }
+                            val hasPending = displayedItems.any { !it.isPaid }
                             if (hasPending) {
                                 Button(
                                     onClick = onPayAllBills,

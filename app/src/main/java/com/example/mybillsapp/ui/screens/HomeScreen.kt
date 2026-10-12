@@ -101,7 +101,7 @@ fun HomeScreen(
             }
             
             if (isVisible) {
-                bank.copy(items = filteredItems)
+                Pair(bank, filteredItems)
             } else null
         }
     }
@@ -210,9 +210,10 @@ fun HomeScreen(
                     }
                 }
             } else {
-                items(filteredBanks, key = { it.id }) { bank ->
+                items(filteredBanks, key = { it.first.id }) { (bank, displayedItems) ->
                     BankCard(
                         bank = bank,
+                        displayedItems = displayedItems,
                         isPrivacy = isPrivacy,
                         showFuture = false,
                         onAddBill = { selectedBankForAddBill = bank.id },
