@@ -1,6 +1,7 @@
 package com.example.mybillsapp.model
 
 import androidx.compose.ui.graphics.Color
+import java.util.Calendar
 import java.util.UUID
 
 val DefaultBankColors = listOf(
@@ -36,7 +37,13 @@ data class BankEntity(
     val subtotalCurrentMonth: Double get() = items.sumOf { it.monthlyAmount }
     val subtotalCurrentMonthPending: Double get() = items.filter { !it.isPaid }.sumOf { it.monthlyAmount }
     val subtotalCurrentMonthPaid: Double get() = items.filter { it.isPaid }.sumOf { it.monthlyAmount }
-    val subtotalFutureDebt: Double get() = 0.0
+    val subtotalFutureDebt: Double 
+        get() {
+            val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
+            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+            return items.filter { !it.isPaid && (it.year > currentYear || (it.year == currentYear && it.month > currentMonth)) }
+                .sumOf { it.monthlyAmount }
+        }
 
     // Cálculo ultra-preciso do total comprometido no cartão sem duplicação de dívida
     val totalCommittedDebt: Double

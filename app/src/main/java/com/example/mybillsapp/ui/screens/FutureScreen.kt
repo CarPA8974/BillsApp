@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.toCurrency
 import com.example.mybillsapp.ui.components.BankCard
+import java.util.Calendar
 
 @Composable
 fun FutureScreen(
@@ -109,9 +110,12 @@ fun FutureScreen(
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(banksWithFutureDebt, key = { it.id }) { bank ->
+                    val currentMonth = Calendar.getInstance().get(Calendar.MONTH)
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+                    val futureDisplayedItems = bank.items.filter { !it.isPaid && (it.year > currentYear || (it.year == currentYear && it.month > currentMonth)) }
                     BankCard(
                         bank = bank,
-                        displayedItems = bank.items.filter { it.remainingDebt > 0 },
+                        displayedItems = futureDisplayedItems,
                         isPrivacy = isPrivacy,
                         showFuture = true,
                         onAddBill = {},
