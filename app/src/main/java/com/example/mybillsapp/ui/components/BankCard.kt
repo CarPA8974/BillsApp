@@ -50,8 +50,6 @@ fun BankCard(
     val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "rotation")
     val bankColor = bank.getColor()
     
-    val valueToShow = if (showFuture) bank.subtotalFutureDebt else bank.subtotalCurrentMonthPending
-
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -76,21 +74,39 @@ fun BankCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
+                    val monthPending = displayedItems.filter { !it.isPaid }.sumOf { it.monthlyAmount }
+                    val totalDebt = bank.totalCommittedDebt
+
                     Text(
                         text = bank.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        text = if (isPrivacy) "R$ ****" else "Falta " + valueToShow.toCurrency(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (showFuture) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
-                    )
+                    
+                    if (!showFuture) {
+                        Text(
+                            text = if (isPrivacy) "Falta no mês: R$ ****" else "Falta no mês: ${monthPending.toCurrency()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (isPrivacy) "Dívida Total: R$ ****" else "Dívida Total: ${totalDebt.toCurrency()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = if (isPrivacy) "Dívida Futura: R$ ****" else "Dívida Futura: ${bank.subtotalFutureDebt.toCurrency()}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     // Bank Info
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Vence dia ${bank.defaultDueDay} | Fecha dia ${bank.closingDay}",
                         style = MaterialTheme.typography.labelSmall,
