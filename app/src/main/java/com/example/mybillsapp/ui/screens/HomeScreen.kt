@@ -55,9 +55,9 @@ fun HomeScreen(
     val totalPaidAmount = banks.sumOf { it.subtotalMonthPaid(currentMonthYear.month, currentMonthYear.year) }
     val totalPendingAmount = banks.sumOf { it.subtotalMonthPending(currentMonthYear.month, currentMonthYear.year) }
 
-    val activeBanks = banks.filter { !it.isArchived }
-    val totalCreditLimit = activeBanks.sumOf { it.creditLimit }
-    val totalAvailableLimit = activeBanks.sumOf { it.availableLimit }
+    val activeOrDisplayedBanks = banks.filter { !it.isArchived || it.itemsForMonth(currentMonthYear.month, currentMonthYear.year).isNotEmpty() }
+    val totalCreditLimit = activeOrDisplayedBanks.sumOf { it.creditLimit }
+    val totalAvailableLimit = activeOrDisplayedBanks.sumOf { it.availableLimit }
 
     val isCurrentMonth = currentMonthYear == MonthYear.current()
 
@@ -218,13 +218,7 @@ fun HomeScreen(
                         showFuture = false,
                         onAddBill = { selectedBankForAddBill = bank.id },
                         onEditBank = { editingBank = bank },
-                        onRemoveBank = {
-                            if (bank.items.isEmpty()) {
-                                viewModel.removeBank(bank.id)
-                            } else {
-                                bankToDelete = bank
-                            }
-                        },
+                        onRemoveBank = { bankToDelete = bank },
                         onToggleBill = { billId ->
                             val bill = bank.items.find { it.id == billId }
                             if (bill != null && bill.totalInstallments > 1) {
