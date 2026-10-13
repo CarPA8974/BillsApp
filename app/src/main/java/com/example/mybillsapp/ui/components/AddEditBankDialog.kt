@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BankPresets
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,8 @@ fun AddEditBankDialog(
                 // Bank Name Input
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { name = it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase(
+                        Locale.getDefault()) else char.toString() } },
                     label = { Text("Nome da Instituição (ex: Nubank, Cartão C6)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),

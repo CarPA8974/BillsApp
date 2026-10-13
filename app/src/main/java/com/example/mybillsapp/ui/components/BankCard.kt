@@ -89,6 +89,15 @@ fun BankCard(
                         color = if (showFuture) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
                     )
 
+                    // Bank Info
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Vence dia ${bank.defaultDueDay} | Fecha dia ${bank.closingDay}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+
                     // Credit Limit Progress & Info
                     if (bank.creditLimit > 0.0) {
                         val available = bank.availableLimit
@@ -105,12 +114,6 @@ fun BankCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 11.sp
-                            )
-                            Text(
-                                text = "Vence dia ${bank.defaultDueDay} | Fecha dia ${bank.closingDay}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 10.sp
                             )
                         }
                         Spacer(modifier = Modifier.height(2.dp))

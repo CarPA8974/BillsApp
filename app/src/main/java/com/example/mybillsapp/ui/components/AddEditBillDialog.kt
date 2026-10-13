@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.model.BillCategory
 import com.example.mybillsapp.model.BillItem
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +83,8 @@ fun AddEditBillDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { 
-                        description = it
+                        description = it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase(
+                            Locale.getDefault()) else char.toString() }
                         errorMessage = null
                         if (!isEditing && it.length >= 2) {
                             val inferred = BillCategory.inferFromText(it)

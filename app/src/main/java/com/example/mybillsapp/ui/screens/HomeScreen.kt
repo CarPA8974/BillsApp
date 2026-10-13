@@ -47,8 +47,6 @@ fun HomeScreen(
     var billToTogglePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) }
     var billToDeletePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) } // Pair(bankId, billId)
 
-    var showAdvanceCycleDialog by remember { mutableStateOf(false) }
-
     // Computations
     val allItemsForMonth = banks.flatMap { it.itemsForMonth(currentMonthYear.month, currentMonthYear.year) }
     val totalMonthAmount = banks.sumOf { it.subtotalMonth(currentMonthYear.month, currentMonthYear.year) }
@@ -140,13 +138,6 @@ fun HomeScreen(
                 Row {
                     IconButton(onClick = { viewModel.nextMonth() }) {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
-                    }
-                    IconButton(onClick = { showAdvanceCycleDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Autorenew,
-                            contentDescription = "Virar Mês",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }
@@ -374,32 +365,4 @@ fun HomeScreen(
         )
     }
 
-    // Advance Month Cycle Dialog
-    if (showAdvanceCycleDialog) {
-        AlertDialog(
-            onDismissRequest = { showAdvanceCycleDialog = false },
-            title = { Text("Virar Mês / Avançar Faturas", fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "Esta ação irá desmarcar os pagamentos das contas recorrentes e avançar +1 parcela das compras parceladas. Despesas com parcelas concluídas serão arquivadas. Deseja continuar?"
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.advanceMonthCycle()
-                        showAdvanceCycleDialog = false
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Confirmar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAdvanceCycleDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
-        )
-    }
 }

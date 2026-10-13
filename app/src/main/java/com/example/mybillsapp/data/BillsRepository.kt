@@ -59,7 +59,7 @@ class BillsRepository(context: Context) {
                         closingDay = safeClosingDay,
                         isArchived = safeIsArchived,
                         creditLimit = safeLimit,
-                        items = bank.items.map { item ->
+                        items = bank.items.filter { it.currentInstallment <= it.totalInstallments }.map { item ->
                             val safeCategory = item.category
                             val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10
                             val safeTotalAmount = if (item.totalAmount > 0.0) item.totalAmount else item.monthlyAmount * item.totalInstallments
