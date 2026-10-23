@@ -5,21 +5,27 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.model.BankEntity
 import com.example.mybillsapp.model.BillCategory
 import com.example.mybillsapp.model.BillItem
 import com.example.mybillsapp.model.MonthYear
+import com.example.mybillsapp.toCurrency
 import com.example.mybillsapp.ui.MainViewModel
 import com.example.mybillsapp.ui.components.*
 import java.util.Calendar
@@ -46,6 +52,12 @@ fun HomeScreen(
     // Bill Action States
     var billToTogglePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) }
     var billToDeletePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) } // Pair(bankId, billId)
+    var billToMovePair by remember { mutableStateOf<Pair<String, BillItem>?>(null) }
+    var selectedBankIdForDetails by remember { mutableStateOf<String?>(null) }
+
+    val monthlyBudget by viewModel.monthlyBudget.collectAsState()
+    var showBudgetWarningDialog by rememberSaveable { mutableStateOf(false) }
+    var hasShownBudgetWarning by rememberSaveable { mutableStateOf(false) }
 
     // Computations
     val allItemsForMonth = banks.flatMap { it.itemsForMonth(currentMonthYear.month, currentMonthYear.year) }
@@ -60,6 +72,13 @@ fun HomeScreen(
     val isCurrentMonth = currentMonthYear == MonthYear.current()
 
     val overdueCount = if (isCurrentMonth) allItemsForMonth.count { it.isOverdue() } else 0
+
+    LaunchedEffect(totalMonthAmount, monthlyBudget) {
+        if (!hasShownBudgetWarning && monthlyBudget > 0.0 && totalMonthAmount > monthlyBudget) {
+            showBudgetWarningDialog = true
+            hasShownBudgetWarning = true
+        }
+    }
 
     // Filter banks & bills for the active month/year (Hide archived banks if they have no active items in the selected month)
     val filteredBanks = remember(banks, currentMonthYear, searchQuery, statusFilter, categoryFilter) {
@@ -227,8 +246,12 @@ fun HomeScreen(
                                 viewModel.removeBill(bank.id, billId)
                             }
                         },
-                        onMoveBillNextMonth = { billId -> viewModel.moveBillToNextMonth(bank.id, billId) },
-                        onPayAllBills = { viewModel.payAllMonthBills(bank.id) }
+                        onMoveBillNextMonth = { billId -> 
+                            val bill = bank.items.find { it.id == billId }
+                            if (bill != null) billToMovePair = Pair(bank.id, bill) 
+                        },
+                        onPayAllBills = { viewModel.payAllMonthBills(bank.id) },
+                        onBankClick = { selectedBankIdForDetails = bank.id }
                     )
                 }
             }
@@ -365,4 +388,187 @@ fun HomeScreen(
         )
     }
 
+    // Move Bill Confirmation
+    billToMovePair?.let { (bankId, billItem) ->
+        AlertDialog(
+            onDismissRequest = { billToMovePair = null },
+            title = { Text("Mover Despesa", fontWeight = FontWeight.Bold) },
+            text = { Text("Deseja realmente mover '${billItem.description}' para o mês seguinte?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.moveBillToNextMonth(bankId, billItem.id)
+                        billToMovePair = null
+                    }
+                ) {
+                    Text("Mover")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { billToMovePair = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Budget Warning
+    if (showBudgetWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showBudgetWarningDialog = false },
+            title = { Text("Orçamento Excedido!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error) },
+            text = { 
+                Text("Você ultrapassou o seu limite de gastos mensal definido de ${monthlyBudget.toCurrency()}.\nTotal Gasto no Mês: ${totalMonthAmount.toCurrency()}") 
+            },
+            confirmButton = {
+                Button(onClick = { showBudgetWarningDialog = false }) { Text("Entendi") }
+            }
+        )
+    }
+
+    // Bank Details Full Screen Dialog
+    selectedBankIdForDetails?.let { bankId ->
+        val detailsPair = filteredBanks.find { it.first.id == bankId }
+        if (detailsPair != null) {
+            BankDetailsDialog(
+                bank = detailsPair.first,
+                displayedItems = detailsPair.second,
+                isPrivacy = isPrivacy,
+                showFuture = false,
+                onDismiss = { selectedBankIdForDetails = null },
+                onAddBill = { selectedBankForAddBill = bankId },
+                onEditBank = { editingBank = detailsPair.first },
+                onRemoveBank = { bankToDelete = detailsPair.first },
+                onToggleBill = { billId ->
+                    val bill = detailsPair.first.items.find { it.id == billId }
+                    if (bill != null && bill.totalInstallments > 1) {
+                        billToTogglePair = Pair(bankId, bill)
+                    } else {
+                        viewModel.toggleBillStatus(bankId, billId)
+                    }
+                },
+                onEditBill = { item -> editingBillPair = Pair(bankId, item) },
+                onRemoveBill = { billId ->
+                    val bill = detailsPair.first.items.find { it.id == billId }
+                    if (bill != null && bill.totalInstallments > 1) {
+                        billToDeletePair = Pair(bankId, bill)
+                    } else {
+                        viewModel.removeBill(bankId, billId)
+                    }
+                },
+                onMoveBillNextMonth = { billId -> 
+                    val bill = detailsPair.first.items.find { it.id == billId }
+                    if (bill != null) billToMovePair = Pair(bankId, bill) 
+                },
+                onPayAllBills = { viewModel.payAllMonthBills(bankId) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BankDetailsDialog(
+    bank: BankEntity,
+    displayedItems: List<BillItem>,
+    isPrivacy: Boolean,
+    showFuture: Boolean,
+    onDismiss: () -> Unit,
+    onAddBill: () -> Unit,
+    onEditBank: () -> Unit,
+    onRemoveBank: () -> Unit,
+    onToggleBill: (String) -> Unit,
+    onEditBill: (BillItem) -> Unit,
+    onRemoveBill: (String) -> Unit,
+    onMoveBillNextMonth: (String) -> Unit,
+    onPayAllBills: () -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(bank.name) },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onEditBank) { Icon(Icons.Default.Edit, contentDescription = "Editar") }
+                        IconButton(onClick = onRemoveBank) { Icon(Icons.Default.Delete, contentDescription = "Excluir") }
+                    }
+                )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = onAddBill,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Nova Despesa") }
+                )
+            }
+        ) { padding ->
+            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+                // Info Cards
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Vencimento: Dia ${bank.defaultDueDay} | Fechamento: Dia ${bank.closingDay}", style = MaterialTheme.typography.bodyMedium)
+                        if (bank.pixKey.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Chave Pix: ${bank.pixKey}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                        if (bank.creditLimit > 0) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Limite Livre: ${if (isPrivacy) "****" else bank.availableLimit.toCurrency()} / ${if (isPrivacy) "****" else bank.creditLimit.toCurrency()} total",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Despesas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    val hasPending = displayedItems.any { !it.isPaid }
+                    if (hasPending && !showFuture) {
+                        TextButton(onClick = onPayAllBills) {
+                            Text("Pagar Tudo", color = Color(0xFF00E676))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (displayedItems.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        Text("Nenhuma despesa para exibir.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp), 
+                        contentPadding = PaddingValues(bottom = 80.dp)
+                    ) {
+                        items(displayedItems, key = { it.id }) { item ->
+                            com.example.mybillsapp.ui.components.BillListItem(
+                                item = item,
+                                isPrivacy = isPrivacy,
+                                showFuture = showFuture,
+                                onTogglePaid = { onToggleBill(item.id) },
+                                onEdit = { onEditBill(item) },
+                                onDelete = { onRemoveBill(item.id) },
+                                onMoveToNextMonth = { onMoveBillNextMonth(item.id) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

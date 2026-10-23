@@ -43,7 +43,8 @@ fun BankCard(
     onEditBill: (BillItem) -> Unit,
     onRemoveBill: (String) -> Unit,
     onMoveBillNextMonth: (String) -> Unit = {},
-    onPayAllBills: () -> Unit = {}
+    onPayAllBills: () -> Unit = {},
+    onBankClick: () -> Unit = {}
 ) {
     // Preserva o estado de expandido/recolhido durante a rolagem (scroll)
     var expanded by rememberSaveable { mutableStateOf(true) }
@@ -61,7 +62,7 @@ fun BankCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expanded = !expanded }
+                    .clickable { onBankClick() }
             ) {
                 // Color Circle Indicator
                 Box(
@@ -165,82 +166,8 @@ fun BankCard(
                     Spacer(modifier = Modifier.width(4.dp))
                 }
 
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Recolher" else "Expandir",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.rotate(rotation)
-                )
-            }
-
-            // Expanded List of Bills
-            AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(top = 12.dp)) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-
-                    if (displayedItems.isEmpty()) {
-                        Text(
-                            text = "Nenhuma despesa cadastrada neste banco.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            displayedItems.forEach { item ->
-                                val shouldShow = if (showFuture) item.remainingDebt > 0.0 else true
-                                if (shouldShow) {
-                                    BillListItem(
-                                        item = item,
-                                        isPrivacy = isPrivacy,
-                                        showFuture = showFuture,
-                                        onTogglePaid = { onToggleBill(item.id) },
-                                        onEdit = { onEditBill(item) },
-                                        onDelete = { onRemoveBill(item.id) },
-                                        onMoveToNextMonth = { onMoveBillNextMonth(item.id) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (!showFuture) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = onAddBill,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Despesa", fontWeight = FontWeight.Bold)
-                            }
-                            
-                            val hasPending = displayedItems.any { !it.isPaid }
-                            if (hasPending) {
-                                Button(
-                                    onClick = onPayAllBills,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E676), contentColor = Color.Black)
-                                ) {
-                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Pagar Tudo", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
     }
-}
+

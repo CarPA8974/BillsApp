@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.mybillsapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "2.6.0"
+        versionCode = 7
+        versionName = "2.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

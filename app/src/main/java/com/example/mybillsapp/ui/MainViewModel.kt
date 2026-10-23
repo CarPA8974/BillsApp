@@ -49,11 +49,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _categoryFilter = MutableStateFlow<BillCategory?>(null)
     val categoryFilter = _categoryFilter.asStateFlow()
 
+    private val _monthlyBudget = MutableStateFlow(0.0)
+    val monthlyBudget = _monthlyBudget.asStateFlow()
+
     init {
         _banks.value = repository.loadData()
         repository.setOnDataChangeListener {
             reloadData()
         }
+        
+        _monthlyBudget.value = prefs.getFloat("monthly_budget", 0f).toDouble()
 
         val savedMonth = prefs.getInt("active_month", -1)
         val savedYear = prefs.getInt("active_year", -1)
@@ -86,6 +91,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setStatusFilter(filter: StatusFilter) { _statusFilter.value = filter }
     fun setCategoryFilter(category: BillCategory?) { _categoryFilter.value = category }
 
+    fun setMonthlyBudget(amount: Double) {
+        prefs.edit().putFloat("monthly_budget", amount.toFloat()).apply()
+        _monthlyBudget.value = amount
+    }
+
     fun nextMonth() { 
         val next = _currentMonthYear.value.nextMonth()
         _currentMonthYear.value = next
@@ -97,7 +107,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveActiveMonth(prev)
     }
 
-    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double = 0.0) {
+    fun addBank(name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double = 0.0, pixKey: String = "") {
         val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         val newBank = BankEntity(
             name = capName,
@@ -105,16 +115,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             presetKey = presetKey,
             defaultDueDay = defaultDueDay,
             closingDay = closingDay,
-            creditLimit = creditLimit
+            creditLimit = creditLimit,
+            pixKey = pixKey
         )
         updateData(_banks.value + newBank)
     }
 
-    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double = 0.0) {
+    fun editBank(bankId: String, name: String, hexColor: String, presetKey: String, defaultDueDay: Int, closingDay: Int, creditLimit: Double = 0.0, pixKey: String = "") {
         val capName = name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
         updateData(_banks.value.map { bank ->
             if (bank.id == bankId) {
-                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay, closingDay = closingDay, creditLimit = creditLimit)
+                bank.copy(name = capName, colorHex = hexColor, presetKey = presetKey, defaultDueDay = defaultDueDay, closingDay = closingDay, creditLimit = creditLimit, pixKey = pixKey)
             } else bank
         })
     }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.mybillsapp.service.BankNotificationService
 import com.example.mybillsapp.ui.MainViewModel
@@ -42,6 +44,9 @@ fun SettingsScreen(
     var showHelpDialog by remember { mutableStateOf(false) }
     var showLogDialog by remember { mutableStateOf(false) }
     val logText = remember(showLogDialog) { Logger.getLogContent(context) }
+    
+    val monthlyBudget by viewModel.monthlyBudget.collectAsState()
+    var budgetInput by remember { mutableStateOf(if (monthlyBudget > 0) monthlyBudget.toString() else "") }
 
     LazyColumn(
         modifier = modifier
@@ -52,12 +57,94 @@ fun SettingsScreen(
     ) {
         // App Preferences
         item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
+        }
+
+        item {
             Text(
                 text = "Preferências do Aplicativo",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
         }
 
         item {
@@ -100,12 +187,94 @@ fun SettingsScreen(
 
         // Help Section
         item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
+        }
+
+        item {
             Text(
                 text = "Ajuda & Suporte",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
         }
 
         item {
@@ -133,12 +302,94 @@ fun SettingsScreen(
 
         // Cycle Management
         item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
+        }
+
+        item {
             Text(
                 text = "Gestão do Ciclo Mensal",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
         }
 
         item {
@@ -163,12 +414,94 @@ fun SettingsScreen(
 
         // Data Management & Backup
         item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
+        }
+
+        item {
             Text(
                 text = "Dados & Backup",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
         }
 
         item {
@@ -230,6 +563,47 @@ fun SettingsScreen(
         }
 
         // App Info & Logs
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Controle de Orçamento", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Seja avisado quando seus gastos do mês ultrapassarem o limite configurado.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    OutlinedTextField(
+                        value = budgetInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() || char == '.' || char == ',' }) budgetInput = it.replace(',', '.') },
+                        label = { Text("Orçamento Máximo Mensal (R$)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Button(
+                        onClick = {
+                            val parsed = budgetInput.toDoubleOrNull() ?: 0.0
+                            viewModel.setMonthlyBudget(parsed)
+                            Toast.makeText(context, "Orçamento salvo!", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Salvar Orçamento")
+                    }
+                }
+            }
+        }
+
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),

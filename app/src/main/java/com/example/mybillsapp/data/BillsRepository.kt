@@ -52,6 +52,7 @@ class BillsRepository(context: Context) {
                     val safeClosingDay = if (bank.closingDay in 1..31) bank.closingDay else (safeDefaultDueDay - 7).let { if (it < 1) it + 30 else it }
                     val safeIsArchived = bank.isArchived
                     val safeLimit = if (bank.creditLimit >= 0.0) bank.creditLimit else 0.0
+                    val safePixKey = bank.pixKey ?: ""
 
                     bank.copy(
                         colorHex = safeHex,
@@ -59,6 +60,7 @@ class BillsRepository(context: Context) {
                         closingDay = safeClosingDay,
                         isArchived = safeIsArchived,
                         creditLimit = safeLimit,
+                        pixKey = safePixKey,
                         items = bank.items.filter { it.currentInstallment <= it.totalInstallments }.map { item ->
                             val safeCategory = item.category
                             val safeDueDay = if (item.dueDay in 1..31) item.dueDay else 10

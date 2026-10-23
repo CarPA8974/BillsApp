@@ -24,7 +24,8 @@ data class BankEntity(
     val defaultDueDay: Int = 10,
     val closingDay: Int = 1, // Dia em que a fatura fecha (joga para o mês seguinte)
     val isArchived: Boolean = false,
-    val creditLimit: Double = 0.0 // Limite estático de crédito
+    val creditLimit: Double = 0.0, // Limite estático de crédito
+    val pixKey: String = "" // Chave Pix do banco
 ) {
     fun itemsForMonth(targetMonth: Int, targetYear: Int): List<BillItem> {
         return items.filter { it.month == targetMonth && it.year == targetYear }
